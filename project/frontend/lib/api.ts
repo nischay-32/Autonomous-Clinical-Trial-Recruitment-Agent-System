@@ -1,6 +1,4 @@
 // Typed API client — all backend calls go through here.
-// Base URL configurable via NEXT_PUBLIC_API_URL env var.
-
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 async function get<T>(path: string): Promise<T> {
@@ -26,40 +24,89 @@ export interface Trial {
   title: string;
   medicine: string;
   total_criteria: number;
-  criteria_rules: Record<string, unknown>;
+  criteria_rules?: Record<string, unknown>;
+  patients_screened?: number;
+  eligible?: number;
+  pending_review?: number;
+  status?: "Active" | "Paused" | "Complete";
 }
 
-export interface ScreenResult {
+export interface PatientCriterionEvaluation {
+  criterion_id: string;
+  type: "INCLUSION" | "EXCLUSION";
+  text: string;
+  status: "PASS" | "FAIL" | "BORDERLINE";
+  confidence: number;
+  evidence: string;
+  source: string;
+}
+
+export interface PatientRecord {
   subject_id: string;
+  age: number;
+  gender: string;
   trial_id: string;
+  trial_title: string;
+  medicine: string;
   status: "ELIGIBLE" | "INELIGIBLE" | "REVIEW_REQUIRED";
-  matcher: {
-    is_eligible: boolean;
-    confidence: number;
-    hard_exclusion_triggered: boolean;
-    criteria_results?: Record<string, unknown>[];
-    shap_values?: Record<string, number>;
-    top_criterion?: string;
+  confidence: number;
+  criteria_passed: number;
+  borderline_count: number;
+  reviewed_at: string;
+  diagnoses?: string[];
+  labs?: Record<string, number>;
+  medications?: string[];
+  criteria_evaluations?: PatientCriterionEvaluation[];
+  disagreement?: {
+    criterion: string;
+    matcher_stance: string;
+    matcher_confidence: number;
+    matcher_reasoning: string;
+    compliance_stance: string;
+    compliance_confidence: number;
+    compliance_reasoning: string;
+    rounds: { round: number; matcher: string; compliance: string; result: string }[];
   };
-  compliance: {
-    is_compliant: boolean;
-    safety_score: number;
-    violations: string[];
-  };
-  consensus: {
-    status: string;
-    rounds_executed: number;
-    consensus: boolean;
-    summary?: string;
-  };
-  outreach?: {
-    patient_id: string;
-    language: string;
-    subject: string;
-    draft_content: string;
-    status: string;
-    is_approved: boolean;
-  };
+}
+
+export interface ReviewQueueItem {
+  session_id: string;
+  patient_id: string;
+  trial_id: string;
+  trial_title: string;
+  medicine: string;
+  age: number;
+  gender: string;
+  disputed_criterion: string;
+  confidence: number;
+  time_in_queue: string;
+  disagreement?: PatientRecord["disagreement"];
+  labs?: Record<string, number>;
+}
+
+export interface OutreachDraft {
+  draft_id: string;
+  patient_id: string;
+  trial_id: string;
+  trial_title: string;
+  medicine: string;
+  language: string;
+  generated_at: string;
+  status: "Pending approval" | "Approved" | "Sent" | "Rejected";
+  confidence: number;
+  subject: string;
+  body: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  agent_name: string;
+  action: string;
+  patient_id: string;
+  trial_id: string;
+  details: Record<string, unknown>;
+  hipaa_flag?: boolean;
 }
 
 export interface ReportData {
@@ -74,28 +121,25 @@ export interface ReportData {
     outreach_drafted: number;
     eligibility_rate: number;
   };
-  shap_summary: unknown[];
+  shap_summary: { feature: string; importance: number }[];
   audit_entries: AuditEntry[];
   total_audit_events: number;
 }
 
-export interface AuditEntry {
-  id: string;
-  timestamp: string;
-  agent_name: string;
-  action: string;
-  patient_id: string;
-  trial_id: string;
-  details: Record<string, unknown>;
+export interface OrgSettings {
+  org_name: string;
+  irb_number: string;
+  compliance_email: string;
+  data_residency: string;
+  retention_years: number;
 }
 
-export interface PatientPayload {
-  subject_id: string;
-  gender?: string;
-  age?: number;
-  diagnoses?: string[];
-  labs?: Record<string, number>;
-  medications?: string[];
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: "Coordinator" | "Viewer" | "Admin";
+  joined: string;
 }
 
 // ── API calls ────────────────────────────────────────────────────
@@ -111,12 +155,29 @@ export const api = {
     criteria_rules: Record<string, unknown>;
     total_criteria: number;
   }) => post<{ message: string; trial_id: string }>("/trials", body),
-  screen: (trial_id: string, patient: PatientPayload) =>
-    post<ScreenResult>("/screen", { trial_id, patient }),
-  report: (trial_id = "") => get<ReportData>(`/report${trial_id ? `?trial_id=${trial_id}` : ""}`),
-  audit: (patient_id = "", limit = 100) =>
-    get<AuditEntry[]>(`/audit?patient_id=${patient_id}&limit=${limit}`),
+  
+  patients: (trial_id = "", decision = "") =>
+    get<PatientRecord[]>(`/patients?trial_id=${trial_id}&decision=${decision}`),
+  patient: (id: string) => get<PatientRecord>(`/patients/${id}`),
+  
+  reviewQueue: () => get<ReviewQueueItem[]>("/review/queue"),
+  adjudicateReview: (session_id: string, decision: "INCLUDE" | "EXCLUDE", justification: string) =>
+    post<{ session_id: string; status: string; message: string }>(`/review/${session_id}/adjudicate`, {
+      decision,
+      justification,
+    }),
+
+  outreachDrafts: () => get<OutreachDraft[]>("/outreach/drafts"),
+  outreachDraft: (id: string) => get<OutreachDraft>(`/outreach/drafts/${id}`),
   approveOutreach: (patient_id: string, coordinator_name: string, comments = "") =>
     post("/outreach/approve", { patient_id, coordinator_name, comments }),
-  languages: () => get<{ supported_languages: string[] }>("/outreach/languages"),
+
+  audit: (patient_id = "", limit = 100) =>
+    get<AuditEntry[]>(`/audit?patient_id=${patient_id}&limit=${limit}`),
+  report: (trial_id = "") => get<ReportData>(`/report${trial_id ? `?trial_id=${trial_id}` : ""}`),
+  
+  orgSettings: () => get<OrgSettings>("/settings/organization"),
+  updateOrgSettings: (payload: Partial<OrgSettings>) =>
+    post<{ status: string; settings: OrgSettings }>("/settings/organization", payload),
+  teamMembers: () => get<TeamMember[]>("/settings/team"),
 };

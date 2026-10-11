@@ -1,87 +1,107 @@
-import type { Metadata } from "next";
+import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "TrialRecruit Privacy Policy — how we collect, use, and protect your information.",
-};
 
-export default function PrivacyPage() {
+
+export default function PrivacyPolicyPage() {
   return (
-    <div className="max-w-3xl mx-auto space-y-8 py-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Privacy Policy</h1>
-        <p className="text-sm text-slate-500 mt-1">Last updated: 11 October 2026</p>
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A]">
+      {/* ── NAVBAR ─────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 h-[56px] bg-white border-b border-[#E2E8F0] px-6">
+        <div className="max-w-screen-xl mx-auto h-full flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="4" fill="#0F172A" />
+              <rect x="5" y="5" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
+              <rect x="18" y="5" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
+              <rect x="5" y="18" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
+              <rect x="18" y="18" width="9" height="9" rx="2" fill="#2563EB" />
+              <path d="M20.5 22.5L22 24L25 20" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="font-semibold text-[16px] text-[#0F172A] tracking-tight">TrialScreen</span>
+          </Link>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">1. Scope</h2>
-        <p>
-          This Privacy Policy applies to the TrialRecruit Clinical Recruitment System (the &ldquo;System&rdquo;), operated by the sponsoring research institution. It describes how protected health information (PHI) and personal data are handled within the System in accordance with applicable law, including HIPAA (45 CFR Parts 160 and 164), the EU General Data Protection Regulation (GDPR) (EU 2016/679), and relevant national legislation.
-        </p>
-      </section>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="text-sm font-medium text-[#0F172A] hover:text-[#2563EB] transition-colors">
+              Log in
+            </Link>
+            <Link href="/" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
+              Back to home
+            </Link>
+          </div>
+        </div>
+      </header>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">2. Data Controller</h2>
-        <p>
-          The Data Controller is the sponsoring research institution operating this System. For data protection enquiries, contact the designated Data Protection Officer (DPO) at your institution.
-        </p>
-      </section>
+      {/* ── CONTENT ────────────────────────────────────────────── */}
+      <main className="flex-1 max-w-[720px] w-full mx-auto px-6 py-16">
+        <h1 className="text-3xl font-bold text-[#0F172A] tracking-tight">Privacy Policy</h1>
+        <p className="text-sm text-[#64748B] mt-1 mb-8">Effective date: October 1, 2026</p>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">3. Data We Process</h2>
-        <p>The System processes the following categories of data:</p>
-        <ul className="list-disc list-inside space-y-1 ml-2">
-          <li>De-identified or pseudonymised patient clinical records (diagnoses, laboratory values, medications, demographics) used solely for eligibility determination.</li>
-          <li>Clinical trial protocol documents and eligibility criteria (sponsor-supplied).</li>
-          <li>Coordinator and investigator identity for audit attribution and communication sign-off.</li>
-          <li>System usage logs and audit events for regulatory traceability.</li>
-        </ul>
-        <p>
-          The System does not process fully identified PHI beyond what is necessary for eligibility screening under an applicable IRB-approved protocol and executed Business Associate Agreement (BAA).
-        </p>
-      </section>
+        <div className="space-y-8 text-sm text-[#334155] leading-relaxed">
+          <section>
+            <h2 className="text-base font-semibold text-[#0F172A] mb-2">1. What data we collect</h2>
+            <p>
+              We collect the information you provide when creating an account (name, work email, organization name, and clinical title). We do not collect, store, or process any patient health data on our cloud servers. All Electronic Health Record (EHR) data remains on the institution&apos;s own database and is processed locally or in your designated virtual private cloud.
+            </p>
+          </section>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">4. Lawful Basis for Processing</h2>
-        <p>Processing is carried out under the following lawful bases:</p>
-        <ul className="list-disc list-inside space-y-1 ml-2">
-          <li>Informed consent of the research participant (FDA 21 CFR 50.20; GDPR Art. 9(2)(a)).</li>
-          <li>Scientific research in the public interest (GDPR Art. 9(2)(j)).</li>
-          <li>Compliance with a legal obligation (HIPAA covered entity obligations).</li>
-        </ul>
-      </section>
+          <section>
+            <h2 className="text-base font-semibold text-[#0F172A] mb-2">2. How we use your account data</h2>
+            <p>
+              Account data is used only to authenticate users, enforce role-based access control (RBAC), and associate clinical trial screening runs with your organization. We do not sell account data, contact details, or operational logs to third parties under any circumstances.
+            </p>
+          </section>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">5. Data Retention</h2>
-        <p>
-          Audit trail records are retained for a minimum of 15 years in compliance with FDA 21 CFR Part 11 and ICH E6(R2) GCP guidelines. Clinical screening records are retained per the institution&rsquo;s data retention schedule and applicable regulatory requirements.
-        </p>
-      </section>
+          <section>
+            <h2 className="text-base font-semibold text-[#0F172A] mb-2">3. Patient data and HIPAA</h2>
+            <p>
+              TrialScreen is engineered for on-premises or institutional VPC deployment under a HIPAA Business Associate Agreement (BAA). Patient data never leaves your network perimeter. All patient identifiers displayed in the web interface are pseudonymized synthetic or institutional IDs (e.g., SUBJECT_ID) with zero direct identifiers (names, Social Security numbers, telephone numbers, or addresses) exposed.
+            </p>
+          </section>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">6. Data Security</h2>
-        <p>
-          The System implements administrative, physical, and technical safeguards including role-based access control (RBAC), TLS 1.3 transport encryption, AES-256 at-rest encryption, and append-only immutable audit logging consistent with FDA 21 CFR Part 11 requirements.
-        </p>
-      </section>
+          <section>
+            <h2 className="text-base font-semibold text-[#0F172A] mb-2">4. Cookies and session data</h2>
+            <p>
+              We use a single secure, HTTP-only session cookie strictly necessary for authentication and session management. We do not use third-party analytics cookies, advertising trackers, or fingerprinting scripts.
+            </p>
+          </section>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">7. Data Subject Rights</h2>
-        <p>
-          Where applicable under GDPR or HIPAA, research participants retain rights to access, rectification, erasure (subject to research exemptions), restriction of processing, and data portability. Requests should be directed to the institution&rsquo;s IRB or DPO.
-        </p>
-      </section>
+          <section>
+            <h2 className="text-base font-semibold text-[#0F172A] mb-2">5. Data retention</h2>
+            <p>
+              Account data is retained for the duration of your organization&apos;s active institutional subscription. Audit logs required under FDA 21 CFR Part 11 are retained according to your institution&apos;s configured regulatory retention schedule (default: 7 years). You may request account deletion by contacting compliance operations.
+            </p>
+          </section>
 
-      <section className="space-y-3 text-sm text-slate-700 leading-relaxed">
-        <h2 className="text-base font-semibold text-slate-900">8. Changes to This Policy</h2>
-        <p>
-          Material changes to this policy will be communicated to system administrators and reflected in a revised effective date. Continued use of the System following notification constitutes acceptance of the updated terms.
-        </p>
-      </section>
+          <section>
+            <h2 className="text-base font-semibold text-[#0F172A] mb-2">6. Contact</h2>
+            <p>
+              For privacy inquiries, Data Protection Officer requests, or to execute a HIPAA BAA, contact compliance@trialscreen.org or write to TrialScreen Data Governance, Department of Clinical Informatics, Bangalore, Karnataka.
+            </p>
+          </section>
+        </div>
+      </main>
 
-      <div className="border-t border-slate-200 pt-4 text-xs text-slate-400">
-        This document does not constitute legal advice. Consult your institution&rsquo;s legal counsel for compliance obligations specific to your jurisdiction and research protocols.
-      </div>
+      {/* ── FOOTER ─────────────────────────────────────────────── */}
+      <footer className="bg-[#0F172A] text-white py-12 mt-auto">
+        <div className="max-w-screen-xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
+            <span className="font-semibold text-white">TrialScreen</span>
+            <span>&copy; 2026</span>
+          </div>
+
+          <div className="flex items-center gap-6 text-sm text-[#94A3B8]">
+            <Link href="/privacy" className="text-white">Privacy Policy</Link>
+            <span className="text-[#334155]">|</span>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+            <span className="text-[#334155]">|</span>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+          </div>
+
+          <div className="text-xs text-[#64748B]">
+            Built by CI_PR_13, JSSATEB, VTU
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

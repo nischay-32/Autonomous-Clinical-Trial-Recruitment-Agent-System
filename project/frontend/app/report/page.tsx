@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { api, type ReportData } from "@/lib/api";
 import ReportClient from "./ReportClient";
 
-export const instant = false;
+
 
 export const metadata: Metadata = { title: "Reports" };
 
