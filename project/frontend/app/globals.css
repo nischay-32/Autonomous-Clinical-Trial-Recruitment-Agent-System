@@ -1,0 +1,343 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+/* ── Design Tokens ────────────────────────────────────────────── */
+@theme inline {
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  /* Neutral palette */
+  --color-slate-50:  #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+
+  /* Accent — sky blue (clinical, accessible) */
+  --color-accent:        #0369a1;   /* sky-700 */
+  --color-accent-light:  #e0f2fe;   /* sky-100 */
+  --color-accent-hover:  #075985;   /* sky-800 */
+
+  /* Semantic */
+  --color-success:  #15803d;   /* green-700 */
+  --color-warning:  #b45309;   /* amber-700 */
+  --color-danger:   #b91c1c;   /* red-700 */
+  --color-success-bg: #f0fdf4;
+  --color-warning-bg: #fffbeb;
+  --color-danger-bg:  #fef2f2;
+
+  /* Surface */
+  --color-background: #f8fafc;
+  --color-surface:    #ffffff;
+  --color-border:     #e2e8f0;
+  --color-text:       #0f172a;
+  --color-muted:      #64748b;
+
+  /* Sidebar */
+  --sidebar-width: 240px;
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Sidebar shell ────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+  background: var(--color-background);
+  padding: 32px 40px;
+}
+
+/* ── Page layout ──────────────────────────────────────────────── */
+.page {
+  padding: 32px 40px;
+  max-width: 1280px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 4px 0 0 0;
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+
+.card-sm {
+  padding: 16px 20px;
+}
+
+/* ── Stat card ────────────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+.btn-primary:hover { background: var(--color-accent-hover); }
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.btn-secondary:hover { background: var(--color-slate-50); }
+
+.btn-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: #fca5a5;
+}
+.btn-danger:hover { background: #fee2e2; }
+
+.btn-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: #86efac;
+}
+.btn-success:hover { background: #dcfce7; }
+
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* ── Table ────────────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-slate-50);
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--color-slate-50); }
+
+/* ── Badge ────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-green  { background: var(--color-success-bg); color: var(--color-success); }
+.badge-red    { background: var(--color-danger-bg);  color: var(--color-danger);  }
+.badge-amber  { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-blue   { background: var(--color-accent-light); color: var(--color-accent); }
+.badge-slate  { background: var(--color-slate-100); color: var(--color-slate-600); }
+
+/* ── Form inputs ──────────────────────────────────────────────── */
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-accent);
+}
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-slate-700);
+  margin-bottom: 4px;
+}
+
+/* ── Funnel bar ───────────────────────────────────────────────── */
+.funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.funnel-label { width: 100px; color: var(--color-muted); flex-shrink: 0; }
+.funnel-track {
+  flex: 1;
+  height: 8px;
+  background: var(--color-slate-100);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.funnel-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.funnel-count { width: 60px; text-align: right; color: var(--color-text); font-weight: 500; }
+
+/* ── Audit table HIPAA flag ───────────────────────────────────── */
+.hipaa-flag {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-danger);
+}
+
+/* ── Sidebar nav ──────────────────────────────────────────────── */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-slate-600);
+  text-decoration: none;
+  border-radius: 6px;
+  margin: 1px 8px;
+  transition: background 0.12s, color 0.12s;
+}
+.nav-link:hover { background: var(--color-slate-100); color: var(--color-text); }
+.nav-link.active { background: var(--color-accent-light); color: var(--color-accent); }
+
+/* ── Prose (policy pages) ─────────────────────────────────────── */
+.prose { max-width: 720px; color: var(--color-slate-700); line-height: 1.7; }
+.prose h2 { font-size: 16px; font-weight: 600; color: var(--color-text); margin: 28px 0 8px; }
+.prose p  { margin: 0 0 14px; }
+.prose ul { padding-left: 20px; margin: 0 0 14px; }
+.prose li { margin-bottom: 6px; }
+
+/* ── Custom size utilities ────────────────────────────────────── */
+.text-2xs { font-size: 10px; line-height: 1.4; }
