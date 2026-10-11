@@ -1,11 +1,14 @@
-"""Criteria Matcher Agent: evaluates patient profiles against trial eligibility criteria."""
+"""Layer 1: Deterministic Criteria Matcher Engine.
+
+Evaluates structured rules: age, ICD-9 codes, lab thresholds, medications, and hard exclusions.
+"""
 
 import re
 
-def _eval_criterion(patient: dict, c: dict) -> tuple[str, float, str]:
-    """Evaluates a single criterion. Returns (status, confidence, evidence).
+def eval_single_criterion(patient: dict, c: dict) -> tuple[str, float, str]:
+    """Evaluates a single criterion against patient record.
 
-    status is one of: 'MET', 'NOT_MET', 'BORDERLINE'
+    Returns: (status: 'MET'|'NOT_MET'|'BORDERLINE', confidence: float, evidence: str)
     """
     ctype = c.get("type", "INCLUSION")
     rule = c.get("rule", {})
@@ -35,13 +38,13 @@ def _eval_criterion(patient: dict, c: dict) -> tuple[str, float, str]:
             score += 1
         if gender == "F":
             score += 1
-        if any(c.startswith("428") for c in diag_codes):  # CHF
+        if any(c.startswith("428") for c in diag_codes):
             score += 1
-        if any(c.startswith("401") for c in diag_codes):  # HTN
+        if any(c.startswith("401") for c in diag_codes):
             score += 1
-        if any(c.startswith("250") for c in diag_codes):  # Diabetes
+        if any(c.startswith("250") for c in diag_codes):
             score += 1
-        if any(c.startswith(("434", "435", "436", "431")) for c in diag_codes):  # Stroke / TIA
+        if any(c.startswith(("434", "435", "436", "431")) for c in diag_codes):
             score += 2
         th = rule.get("threshold", 2)
         if score >= th:
@@ -84,7 +87,6 @@ def _eval_criterion(patient: dict, c: dict) -> tuple[str, float, str]:
             val = vitals.get(lab_name)
         
         if val is None:
-            # If lab is missing from patient record, mark BORDERLINE for coordinator inspection
             return "BORDERLINE", 0.75, f"Lab/vital '{lab_name}' pending measurement"
         
         th = rule.get("threshold", 0.0)
@@ -146,7 +148,6 @@ def _eval_criterion(patient: dict, c: dict) -> tuple[str, float, str]:
             else:
                 if found_kw:
                     return "MET", 0.90, f"Clinical notes confirm: {found_kw}"
-                # If positive inclusion criterion not mentioned in brief notes, mark standard baseline
                 return "MET", 0.85, f"Presumed compliant pending intake: {keywords}"
         else:
             if found_kw:
@@ -155,12 +156,9 @@ def _eval_criterion(patient: dict, c: dict) -> tuple[str, float, str]:
 
     return "MET", 0.85, "Criterion evaluated"
 
-def match_criteria(patient: dict, criteria: dict) -> dict:
-    """Evaluates a patient profile against trial eligibility criteria.
-
-    Supports both full versioned criteria format and legacy rule dicts.
-    """
-    # Backward compatibility with legacy test dicts
+def evaluate_deterministic_rules(patient: dict, criteria: dict) -> dict:
+    """Evaluates all inclusion and exclusion rules deterministically."""
+    # Support legacy test dictionary format
     if "min_age" in criteria or "required_icd9" in criteria or "excluded_icd9" in criteria:
         matched, reasons = True, []
         min_age, max_age = criteria.get("min_age", 18), criteria.get("max_age", 100)
@@ -184,14 +182,11 @@ def match_criteria(patient: dict, criteria: dict) -> dict:
             "confidence": conf,
             "reasons": reasons,
             "hard_exclusion_triggered": bool(hit),
+            "details": [],
         }
 
-    # Full structured trial evaluation
-    inc_list = criteria.get("criteria", {}).get("inclusion", [])
-    exc_list = criteria.get("criteria", {}).get("exclusion", [])
-    if not inc_list and not exc_list:
-        inc_list = criteria.get("inclusion", [])
-        exc_list = criteria.get("exclusion", [])
+    inc_list = criteria.get("criteria", {}).get("inclusion", []) or criteria.get("inclusion", [])
+    exc_list = criteria.get("criteria", {}).get("exclusion", []) or criteria.get("exclusion", [])
 
     is_eligible = True
     hard_exclusion_triggered = False
@@ -202,9 +197,8 @@ def match_criteria(patient: dict, criteria: dict) -> dict:
     borderline_count = 0
     failed_count = 0
 
-    # Evaluate Inclusions
     for c in inc_list:
-        status, conf, evidence = _eval_criterion(patient, c)
+        status, conf, evidence = eval_single_criterion(patient, c)
         conf_scores.append(conf)
         details.append({
             "criterion_id": c.get("criterion_id"),
@@ -225,9 +219,8 @@ def match_criteria(patient: dict, criteria: dict) -> dict:
             is_eligible = False
             reasons.append(f"Inclusion failed: {c.get('description')} ({evidence})")
 
-    # Evaluate Exclusions
     for c in exc_list:
-        status, conf, evidence = _eval_criterion(patient, c)
+        status, conf, evidence = eval_single_criterion(patient, c)
         is_hard = c.get("is_hard_exclusion", False)
         conf_scores.append(conf)
         details.append({
@@ -240,7 +233,6 @@ def match_criteria(patient: dict, criteria: dict) -> dict:
             "evidence": evidence,
         })
         if status == "NOT_MET":
-            # Condition triggered -> Patient excluded!
             failed_count += 1
             is_eligible = False
             if is_hard:
