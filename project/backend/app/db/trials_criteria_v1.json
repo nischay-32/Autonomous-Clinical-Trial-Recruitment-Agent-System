@@ -1,0 +1,1667 @@
+{
+  "NCT00005143": {
+    "trial_id": "NCT00005143",
+    "title": "Type 2 Diabetes Mellitus Glycemic Management (Metformin)",
+    "medicine": "Metformin",
+    "version": "1.0",
+    "total_criteria": 28,
+    "inclusion_count": 15,
+    "exclusion_count": 13,
+    "criteria": {
+      "inclusion": [
+        {
+          "criterion_id": "MET-INC-01",
+          "number": 1,
+          "type": "INCLUSION",
+          "description": "Age ≥ 30 AND ≤ 70 years",
+          "rationale": "Metformin trials target adult T2DM. Below 30 = pediatric (different dosing); above 70 = increased adverse risk.",
+          "table_column": "PATIENTS.DOB → compute age at admission date",
+          "n2c2_tag": "DM-Age",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.95",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "age",
+            "min_age": 30,
+            "max_age": 70
+          }
+        },
+        {
+          "criterion_id": "MET-INC-02",
+          "number": 2,
+          "type": "INCLUSION",
+          "description": "Confirmed Type 2 Diabetes Mellitus (T2DM) diagnosis",
+          "rationale": "Core inclusion: ICD-9 250.x0/250.x2 = Type 2. Must NOT be Type 1 (250.x1/250.x3).",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE LIKE '250%0' OR '250%2'",
+          "n2c2_tag": "DM",
+          "icd9_raw": "250.00, 250.02",
+          "target_score": "≥ 0.95",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "250.00",
+              "250.02"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-03",
+          "number": 3,
+          "type": "INCLUSION",
+          "description": "HbA1c ≥ 7.5% at screening (within last 3 months)",
+          "rationale": "HbA1c is 3-month average blood sugar. ≥ 7.5% = poor control → qualifies for intervention.",
+          "table_column": "LABEVENTS.ITEMID=50852 (HbA1c), VALUENUM ≥ 7.5",
+          "n2c2_tag": "HbA1c",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.90",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "hba1c",
+            "op": ">=",
+            "threshold": 7.5
+          }
+        },
+        {
+          "criterion_id": "MET-INC-04",
+          "number": 4,
+          "type": "INCLUSION",
+          "description": "Fasting Blood Glucose ≥ 130 mg/dL",
+          "rationale": "Confirms active hyperglycemia at time of trial. Secondary confirmatory criterion.",
+          "table_column": "LABEVENTS.ITEMID=50931 (Glucose), VALUENUM ≥ 130",
+          "n2c2_tag": "GLUCOSE",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.88",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "glucose",
+            "op": ">=",
+            "threshold": 130.0
+          }
+        },
+        {
+          "criterion_id": "MET-INC-05",
+          "number": 5,
+          "type": "INCLUSION",
+          "description": "BMI ≥ 25 kg/m² (Overweight or Obese)",
+          "rationale": "Metformin specifically benefits overweight T2DM patients — weight neutral, may reduce weight.",
+          "table_column": "CHARTEVENTS ITEMID=3580(Wt), 3693(Ht) → compute BMI=weight/(height²)",
+          "n2c2_tag": "BMI",
+          "icd9_raw": "V85.21-30",
+          "target_score": "≥ 0.85",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "bmi",
+            "op": ">=",
+            "threshold": 25.0
+          }
+        },
+        {
+          "criterion_id": "MET-INC-06",
+          "number": 6,
+          "type": "INCLUSION",
+          "description": "eGFR ≥ 45 mL/min/1.73m² (adequate renal function)",
+          "rationale": "Metformin cleared by kidneys. Low eGFR → drug accumulates → lactic acidosis risk.",
+          "table_column": "LABEVENTS.ITEMID=50912 (Creatinine) → CKD-EPI formula",
+          "n2c2_tag": "RENAL-FUNC",
+          "icd9_raw": "585.3",
+          "target_score": "≥ 0.92",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "egfr",
+            "op": ">=",
+            "threshold": 45.0
+          }
+        },
+        {
+          "criterion_id": "MET-INC-07",
+          "number": 7,
+          "type": "INCLUSION",
+          "description": "Serum Creatinine < 1.5 mg/dL (Female) OR < 1.7 mg/dL (Male)",
+          "rationale": "Direct creatinine threshold used in original Metformin prescribing guidelines (FDA label).",
+          "table_column": "LABEVENTS.ITEMID=50912, PATIENTS.GENDER → gender-specific threshold",
+          "n2c2_tag": "CREATININE",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.92",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "creatinine",
+            "op": "<",
+            "threshold": 1.5
+          }
+        },
+        {
+          "criterion_id": "MET-INC-08",
+          "number": 8,
+          "type": "INCLUSION",
+          "description": "Blood Pressure < 160/100 mmHg (no uncontrolled hypertension)",
+          "rationale": "Severe HTN indicates poor cardiovascular control — increases trial complexity.",
+          "table_column": "CHARTEVENTS ITEMID=51(SBP), ITEMID=8368(DBP) → both thresholds",
+          "n2c2_tag": "BP",
+          "icd9_raw": "401.0",
+          "target_score": "≥ 0.85",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "sbp",
+            "op": "<",
+            "threshold": 160.0
+          }
+        },
+        {
+          "criterion_id": "MET-INC-09",
+          "number": 9,
+          "type": "INCLUSION",
+          "description": "No insulin therapy for > 3 months prior to enrollment",
+          "rationale": "Trial targets patients manageable with oral agents. Long-term insulin = more severe disease.",
+          "table_column": "PRESCRIPTIONS.DRUG LIKE '%insulin%' → date check ≤ 3 months",
+          "n2c2_tag": "MAJOR-DIABETES",
+          "icd9_raw": "V58.67",
+          "target_score": "≥ 0.88",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "icd9",
+            "codes": [
+              "V58.67"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-10",
+          "number": 10,
+          "type": "INCLUSION",
+          "description": "Willing and able to provide written informed consent",
+          "rationale": "Ethical requirement. Patient must be cognitively capable and consent voluntarily.",
+          "table_column": "NOTEEVENTS → NER for 'informed consent', 'patient agreed', 'consented'",
+          "n2c2_tag": "MAKES-DECISIONS",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.80",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "consent"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-11",
+          "number": 11,
+          "type": "INCLUSION",
+          "description": "Ability to understand and follow dietary instructions",
+          "rationale": "Metformin works best with lifestyle modification. Patient must be capable of compliance.",
+          "table_column": "NOTEEVENTS → NER for 'dietary counseling', 'diabetic diet', 'meal plan'",
+          "n2c2_tag": "DIETSUPP-2MOS",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.80",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "diet"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-12",
+          "number": 12,
+          "type": "INCLUSION",
+          "description": "English language proficiency OR translator available",
+          "rationale": "Patient must understand trial procedures. Protocol documents in English.",
+          "table_column": "NOTEEVENTS → language field OR 'interpreter', 'translator' noted",
+          "n2c2_tag": "ENGLISH",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.85",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "translator"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-13",
+          "number": 13,
+          "type": "INCLUSION",
+          "description": "ALT / AST < 3× Upper Limit of Normal (liver function adequate)",
+          "rationale": "Metformin metabolized in liver. Elevated liver enzymes = possible liver damage risk.",
+          "table_column": "LABEVENTS ITEMID=50861(ALT), 50878(AST) → VALUENUM < 3×ULN (ULN=40 U/L)",
+          "n2c2_tag": "LIVER",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.88",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "upper",
+              "limit",
+              "normal"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-14",
+          "number": 14,
+          "type": "INCLUSION",
+          "description": "No hospitalization for diabetes-related illness in past 6 months",
+          "rationale": "Recent DKA/hyperosmolar coma = unstable diabetes — not suitable for oral agent trial.",
+          "table_column": "ADMISSIONS.DIAGNOSIS contains 'diabetic ketoacidosis' OR ICD9 250.1x → date check",
+          "n2c2_tag": "MAJOR-DIABETES",
+          "icd9_raw": "250.10",
+          "target_score": "≥ 0.88",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "icd9",
+            "codes": [
+              "250.10"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-INC-15",
+          "number": 15,
+          "type": "INCLUSION",
+          "description": "Stable weight (< 5% change in past 3 months)",
+          "rationale": "Significant weight change indicates uncontrolled metabolic state or malnutrition.",
+          "table_column": "CHARTEVENTS ITEMID=3580 (Weight) → compare values over 3-month window",
+          "n2c2_tag": "BMI",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.82",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "stable",
+              "weight",
+              "change"
+            ]
+          }
+        }
+      ],
+      "exclusion": [
+        {
+          "criterion_id": "MET-EXC-01",
+          "number": 1,
+          "type": "EXCLUSION",
+          "description": "Type 1 Diabetes Mellitus (insulin-dependent)",
+          "rationale": "T1DM has autoimmune destruction of beta cells — Metformin ineffective. Different pathophysiology.",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE IN (250.01, 250.03) OR 'Type 1' in NOTEEVENTS",
+          "n2c2_tag": "DM-Type1",
+          "icd9_raw": "250.01, 250.03",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "250.01",
+              "250.03"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-02",
+          "number": 2,
+          "type": "EXCLUSION",
+          "description": "Severe renal impairment: eGFR < 30 mL/min/1.73m²",
+          "rationale": "FDA Black Box Warning: Metformin contraindicated in severe renal failure — fatal lactic acidosis.",
+          "table_column": "LABEVENTS ITEMID=50912 → Creatinine > 1.5(F)/1.7(M) OR eGFR < 30",
+          "n2c2_tag": "RENAL-FAIL",
+          "icd9_raw": "585.5, 585.6",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "category": "lab",
+            "lab_name": "egfr",
+            "op": "<",
+            "threshold": 30.0
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-03",
+          "number": 3,
+          "type": "EXCLUSION",
+          "description": "Congestive Heart Failure requiring pharmacologic treatment",
+          "rationale": "CHF causes hypoperfusion of organs → lactic acid buildup → Metformin worsens lactic acidosis.",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE IN (428.0, 428.1, 428.2x, 428.3x)",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "428.0",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "428.0"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-04",
+          "number": 4,
+          "type": "EXCLUSION",
+          "description": "Active or chronic liver disease (Cirrhosis / Hepatitis)",
+          "rationale": "Liver clears lactate. Diseased liver cannot clear → lactic acidosis risk is extreme.",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE IN (571.x, 070.x) OR AST/ALT > 3×ULN",
+          "n2c2_tag": "ALCOHOL",
+          "icd9_raw": "571.2",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "571.2"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-05",
+          "number": 5,
+          "type": "EXCLUSION",
+          "description": "Chronic alcohol abuse (≥ 3 drinks/day)",
+          "rationale": "Alcohol inhibits gluconeogenesis and impairs lactate clearance — synergistic toxicity with Metformin.",
+          "table_column": "DIAGNOSES_ICD 303.x OR NOTEEVENTS → 'alcohol abuse', 'ETOH', 'alcoholism'",
+          "n2c2_tag": "ALCOHOL-ABUSE",
+          "icd9_raw": "303.00",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "303.00"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-06",
+          "number": 6,
+          "type": "EXCLUSION",
+          "description": "Current or planned pregnancy (women of childbearing age)",
+          "rationale": "Metformin crosses placenta. Category B but trial protocol excludes pregnant women.",
+          "table_column": "NOTEEVENTS → NER 'pregnant', 'pregnancy test positive' + PATIENTS.GENDER=F",
+          "n2c2_tag": "PREG",
+          "icd9_raw": "V22.x",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "V22.x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-07",
+          "number": 7,
+          "type": "EXCLUSION",
+          "description": "Known hypersensitivity / allergy to Metformin or biguanides",
+          "rationale": "Documented allergic reaction = absolute contraindication per trial protocol.",
+          "table_column": "PRESCRIPTIONS → allergy list + NOTEEVENTS → 'Metformin allergy', 'biguanide sensitivity'",
+          "n2c2_tag": "ALLERGY",
+          "icd9_raw": "995.27",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "995.27"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-08",
+          "number": 8,
+          "type": "EXCLUSION",
+          "description": "Radiologic contrast dye procedure within past 48 hours",
+          "rationale": "IV contrast temporarily impairs kidneys → Metformin must be withheld 48h before and after.",
+          "table_column": "PRESCRIPTIONS DRUG LIKE '%contrast%' OR NOTEEVENTS → 'CT with contrast' → date check",
+          "n2c2_tag": "CONTRAST",
+          "icd9_raw": "V58.61",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "V58.61"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-09",
+          "number": 9,
+          "type": "EXCLUSION",
+          "description": "Diabetic Ketoacidosis (DKA) or hyperosmolar state currently",
+          "rationale": "Acute DKA = emergency. Oral agents NOT appropriate — requires IV insulin immediately.",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE IN (250.10, 250.12, 250.20, 250.22)",
+          "n2c2_tag": "KETO-1YR",
+          "icd9_raw": "250.10",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "250.10"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-10",
+          "number": 10,
+          "type": "EXCLUSION",
+          "description": "Participation in another clinical trial within past 30 days",
+          "rationale": "Trial protocol integrity: concurrent trial participation causes confounding.",
+          "table_column": "NOTEEVENTS → NER 'clinical trial', 'study drug', 'research protocol' → date check",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "N/A",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "clinical trial"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-11",
+          "number": 11,
+          "type": "EXCLUSION",
+          "description": "Major surgery planned within 3 months of enrollment",
+          "rationale": "Surgery temporarily disrupts metabolism and renal perfusion — Metformin must be stopped pre-op.",
+          "table_column": "NOTEEVENTS → NER 'surgery', 'operative', 'procedure' → future date reference",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "N/A",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "surgery"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-12",
+          "number": 12,
+          "type": "EXCLUSION",
+          "description": "Severe respiratory disease causing hypoxemia (SpO2 < 90%)",
+          "rationale": "Hypoxia promotes anaerobic metabolism → lactic acid production → Metformin worsens acidosis.",
+          "table_column": "CHARTEVENTS ITEMID=646 (SpO2) → VALUENUM < 90 OR DIAGNOSES_ICD 491.x, 492.x",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "491.0, 492.0",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "491.0",
+              "492.0"
+            ]
+          }
+        },
+        {
+          "criterion_id": "MET-EXC-13",
+          "number": 13,
+          "type": "EXCLUSION",
+          "description": "Patient refuses consent or is cognitively impaired",
+          "rationale": "Ethical: cannot enroll patient who cannot give voluntary informed consent.",
+          "table_column": "NOTEEVENTS → NER 'refused', 'declined', 'dementia', 'cognitive impairment'",
+          "n2c2_tag": "MAKES-DECISIONS",
+          "icd9_raw": "294.x",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "294.x"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "NCT00262600": {
+    "trial_id": "NCT00262600",
+    "title": "Atrial Fibrillation Stroke Prevention (ACTIVE-W Warfarin)",
+    "medicine": "Warfarin",
+    "version": "1.0",
+    "total_criteria": 26,
+    "inclusion_count": 14,
+    "exclusion_count": 12,
+    "criteria": {
+      "inclusion": [
+        {
+          "criterion_id": "WAR-INC-01",
+          "number": 1,
+          "type": "INCLUSION",
+          "description": "Age ≥ 18 years",
+          "rationale": "Warfarin dosing validated only in adults. Pediatric pharmacokinetics differ significantly.",
+          "table_column": "PATIENTS.DOB → compute age ≥ 18 at admission",
+          "n2c2_tag": "AGE",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.95",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "age",
+            "min_age": 18
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-02",
+          "number": 2,
+          "type": "INCLUSION",
+          "description": "Confirmed Atrial Fibrillation (AF) — paroxysmal, persistent, or permanent",
+          "rationale": "Primary indication for Warfarin in this trial. AF causes blood clots → stroke risk.",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE IN (427.31, 427.32) OR NOTEEVENTS → 'atrial fibrillation', 'AF', 'a-fib'",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "427.31, 427.32",
+          "target_score": "≥ 0.95",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "427.31",
+              "427.32"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-03",
+          "number": 3,
+          "type": "INCLUSION",
+          "description": "CHA₂DS₂-VASc Score ≥ 2 (high stroke risk)",
+          "rationale": "Warfarin only justified when stroke risk exceeds bleeding risk. Score computed from comorbidities.",
+          "table_column": "Compute: CHF(428.x)+HTN(401.x)+Age≥75+DM(250.x)+Stroke(436)+Vascular(410.x)+Age65-74+Female",
+          "n2c2_tag": "STROKE-RISK",
+          "icd9_raw": "436, 435.x",
+          "target_score": "≥ 0.88",
+          "borderline_action": "Score=1 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "chads_vasc",
+            "threshold": 2
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-04",
+          "number": 4,
+          "type": "INCLUSION",
+          "description": "INR 1.0–1.5 at baseline (pre-treatment coagulation normal)",
+          "rationale": "Patient must not already be anticoagulated at enrollment. INR > 1.5 = already on blood thinners.",
+          "table_column": "LABEVENTS.ITEMID=51237 (PT-INR), VALUENUM BETWEEN 1.0 AND 1.5",
+          "n2c2_tag": "INR",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.90",
+          "borderline_action": "INR 1.5–2.0 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "inr",
+            "op": ">",
+            "threshold": 1.0,
+            "max_threshold": 1.5
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-05",
+          "number": 5,
+          "type": "INCLUSION",
+          "description": "Platelet count ≥ 100,000/μL (adequate platelet function)",
+          "rationale": "Minimum platelet level needed to tolerate anticoagulation without catastrophic bleeding risk.",
+          "table_column": "LABEVENTS.ITEMID=51265 (Platelet Count), VALUENUM ≥ 100",
+          "n2c2_tag": "THROMBOCYT",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.90",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "platelets",
+            "op": ">=",
+            "threshold": 100000.0
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-06",
+          "number": 6,
+          "type": "INCLUSION",
+          "description": "Systolic BP < 180 mmHg (controlled hypertension)",
+          "rationale": "Severely uncontrolled hypertension increases hemorrhagic stroke risk on Warfarin.",
+          "table_column": "CHARTEVENTS.ITEMID=51 (SBP), VALUENUM < 180",
+          "n2c2_tag": "BP",
+          "icd9_raw": "401.x",
+          "target_score": "≥ 0.88",
+          "borderline_action": "SBP 160-180 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "401.x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-07",
+          "number": 7,
+          "type": "INCLUSION",
+          "description": "Life expectancy ≥ 1 year (no terminal illness)",
+          "rationale": "Anticoagulation only benefits patients with sufficient survival time horizon.",
+          "table_column": "NOTEEVENTS → NER for 'palliative', 'hospice', 'terminal', 'prognosis < 6 months' → negative",
+          "n2c2_tag": "PROGNOSIS",
+          "icd9_raw": "V66.7",
+          "target_score": "≥ 0.80",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "icd9",
+            "codes": [
+              "V66.7"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-08",
+          "number": 8,
+          "type": "INCLUSION",
+          "description": "No history of intracranial hemorrhage (> 6 months ago)",
+          "rationale": "Prior brain bleed indicates blood vessel fragility — Warfarin risk may still be acceptable if old.",
+          "table_column": "DIAGNOSES_ICD 431.x (ICH) → date of admission > 6 months ago",
+          "n2c2_tag": "BLEEDING",
+          "icd9_raw": "431",
+          "target_score": "≥ 0.82",
+          "borderline_action": "< 6 months → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "icd9",
+            "codes": [
+              "431"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-09",
+          "number": 9,
+          "type": "INCLUSION",
+          "description": "Hemoglobin ≥ 8 g/dL (not severely anemic)",
+          "rationale": "Severe anemia combined with anticoagulation creates extreme bleeding-related decompensation risk.",
+          "table_column": "LABEVENTS.ITEMID=51222 (Hemoglobin), VALUENUM ≥ 8",
+          "n2c2_tag": "ANEMIA",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.88",
+          "borderline_action": "Hgb 8–10 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "note_nlp",
+            "keywords": [
+              "hemoglobin",
+              "severely",
+              "anemic"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-10",
+          "number": 10,
+          "type": "INCLUSION",
+          "description": "Reliable access to INR monitoring facility",
+          "rationale": "Warfarin requires frequent INR blood tests (weekly initially). Must confirm patient can access lab.",
+          "table_column": "NOTEEVENTS → NER 'lives alone', 'rural', 'no transport' → negative check; or social work note",
+          "n2c2_tag": "SOCIAL",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.78",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "reliable",
+              "access",
+              "monitoring"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-11",
+          "number": 11,
+          "type": "INCLUSION",
+          "description": "Ability to comply with medication schedule and follow-up visits",
+          "rationale": "Warfarin has narrow therapeutic window — missed doses or monitoring visits are dangerous.",
+          "table_column": "NOTEEVENTS → NER 'non-compliant', 'missed doses', 'non-adherent' → negative check",
+          "n2c2_tag": "MAKES-DECISIONS",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.82",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "ability",
+              "comply",
+              "medication"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-12",
+          "number": 12,
+          "type": "INCLUSION",
+          "description": "No active malignancy requiring chemotherapy",
+          "rationale": "Cancer patients on chemo have unpredictable INR fluctuations — Warfarin interaction complex.",
+          "table_column": "DIAGNOSES_ICD 140.x–208.x (malignancy) + PRESCRIPTIONS chemo agents → active check",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "140.x",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "icd9",
+            "codes": [
+              "140.x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-13",
+          "number": 13,
+          "type": "INCLUSION",
+          "description": "Renal function adequate: eGFR ≥ 30 mL/min",
+          "rationale": "Warfarin metabolites partially cleared by kidneys. Severe renal impairment alters drug levels.",
+          "table_column": "LABEVENTS ITEMID=50912 (Creatinine) → compute eGFR via CKD-EPI",
+          "n2c2_tag": "RENAL-FUNC",
+          "icd9_raw": "585.4",
+          "target_score": "≥ 0.85",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "egfr",
+            "op": ">=",
+            "threshold": 30.0
+          }
+        },
+        {
+          "criterion_id": "WAR-INC-14",
+          "number": 14,
+          "type": "INCLUSION",
+          "description": "Written informed consent obtained",
+          "rationale": "Mandatory ethical requirement for all trial participants.",
+          "table_column": "NOTEEVENTS → NER 'informed consent', 'consented to trial', 'agreed to participate'",
+          "n2c2_tag": "MAKES-DECISIONS",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.95",
+          "borderline_action": "Refusal → Hard exclusion",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "consent"
+            ]
+          }
+        }
+      ],
+      "exclusion": [
+        {
+          "criterion_id": "WAR-EXC-01",
+          "number": 1,
+          "type": "EXCLUSION",
+          "description": "Active bleeding or hemorrhagic stroke within past 6 months",
+          "rationale": "ABSOLUTE contraindication. Warfarin will worsen active or recent bleed catastrophically.",
+          "table_column": "DIAGNOSES_ICD 431.x (ICH), 578.x (GI bleed) → date check < 6 months",
+          "n2c2_tag": "BLEEDING",
+          "icd9_raw": "431, 578.9",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "431",
+              "578.9"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-02",
+          "number": 2,
+          "type": "EXCLUSION",
+          "description": "Platelet count < 50,000/μL (severe thrombocytopenia)",
+          "rationale": "Anticoagulation with critically low platelets = uncontrollable bleeding risk.",
+          "table_column": "LABEVENTS.ITEMID=51265 → VALUENUM < 50",
+          "n2c2_tag": "THROMBOCYT",
+          "icd9_raw": "287.5",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "category": "lab",
+            "lab_name": "platelets",
+            "op": "<",
+            "threshold": 50000.0
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-03",
+          "number": 3,
+          "type": "EXCLUSION",
+          "description": "Pregnancy (confirmed or suspected)",
+          "rationale": "Warfarin is TERATOGENIC — causes fetal warfarin syndrome and fetal hemorrhage.",
+          "table_column": "NOTEEVENTS → NER 'pregnant', 'pregnancy' + PATIENTS.GENDER=F + age 15-50",
+          "n2c2_tag": "PREG",
+          "icd9_raw": "V22.x, V23.x",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "V22.x",
+              "V23.x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-04",
+          "number": 4,
+          "type": "EXCLUSION",
+          "description": "Known hypersensitivity to Warfarin or coumarin compounds",
+          "rationale": "Documented allergic reaction to Warfarin = absolute contraindication.",
+          "table_column": "PRESCRIPTIONS → allergy field; NOTEEVENTS → 'Warfarin allergy', 'coumarin allergy'",
+          "n2c2_tag": "ALLERGY",
+          "icd9_raw": "995.27",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "995.27"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-05",
+          "number": 5,
+          "type": "EXCLUSION",
+          "description": "Concurrent high-dose NSAID use (ibuprofen ≥ 1200 mg/day, naproxen, etc.)",
+          "rationale": "NSAIDs inhibit platelet aggregation AND increase GI mucosal bleeding risk — synergistic with Warfarin.",
+          "table_column": "PRESCRIPTIONS.DRUG LIKE '%ibuprofen%' OR '%naproxen%' → dose check ≥ 1200 mg",
+          "n2c2_tag": "DRUG-INTER",
+          "icd9_raw": "V58.61",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "V58.61"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-06",
+          "number": 6,
+          "type": "EXCLUSION",
+          "description": "Severe liver disease: Child-Pugh Class C cirrhosis",
+          "rationale": "Liver produces clotting factors. Severe cirrhosis already impairs coagulation — Warfarin unpredictable.",
+          "table_column": "DIAGNOSES_ICD 571.2x (cirrhosis) + Child-Pugh score from labs/notes",
+          "n2c2_tag": "ALCOHOL",
+          "icd9_raw": "571.2",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "571.2"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-07",
+          "number": 7,
+          "type": "EXCLUSION",
+          "description": "Blood pressure > 180/110 mmHg uncontrolled",
+          "rationale": "Severely uncontrolled HTN + Warfarin = high risk of hemorrhagic stroke.",
+          "table_column": "CHARTEVENTS ITEMID=51 (SBP) > 180 OR ITEMID=8368 (DBP) > 110",
+          "n2c2_tag": "BP",
+          "icd9_raw": "401.0",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "category": "lab",
+            "lab_name": "sbp",
+            "op": ">",
+            "threshold": 180.0
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-08",
+          "number": 8,
+          "type": "EXCLUSION",
+          "description": "Current or planned neurosurgery or ophthalmic surgery within 2 weeks",
+          "rationale": "Surgery near brain or eyes — Warfarin must be stopped. Cannot enroll mid-peri-operative period.",
+          "table_column": "NOTEEVENTS → NER 'craniotomy', 'cataract surgery', 'neurosurgical' → future date check",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "N/A",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "surgery"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-09",
+          "number": 9,
+          "type": "EXCLUSION",
+          "description": "Active peptic ulcer disease or GI bleed within 1 year",
+          "rationale": "GI ulcers bleed freely — Warfarin's anti-clotting effect causes uncontrollable GI hemorrhage.",
+          "table_column": "DIAGNOSES_ICD 531.x (gastric ulcer), 532.x (duodenal ulcer), 578.x (GI bleed) → date check",
+          "n2c2_tag": "BLEEDING",
+          "icd9_raw": "531.0, 578.9",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "531.0",
+              "578.9"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-10",
+          "number": 10,
+          "type": "EXCLUSION",
+          "description": "Alcohol dependency or abuse (HbA1c-equivalent: chronic alcohol > 14 units/week)",
+          "rationale": "Alcohol unpredictably alters Warfarin metabolism — one week potentiates, next week inhibits.",
+          "table_column": "DIAGNOSES_ICD 303.x OR NOTEEVENTS → 'alcohol dependence', 'chronic alcoholism'",
+          "n2c2_tag": "ALCOHOL-ABUSE",
+          "icd9_raw": "303.90",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "303.90"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-11",
+          "number": 11,
+          "type": "EXCLUSION",
+          "description": "Planned use of drugs with major Warfarin interaction (amiodarone, fluconazole, rifampin)",
+          "rationale": "These drugs drastically alter Warfarin levels — INR becomes unpredictable and dangerous.",
+          "table_column": "PRESCRIPTIONS.DRUG IN ('amiodarone', 'fluconazole', 'rifampin', 'rifampicin') → active check",
+          "n2c2_tag": "DRUG-INTER",
+          "icd9_raw": "V58.61",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "V58.61"
+            ]
+          }
+        },
+        {
+          "criterion_id": "WAR-EXC-12",
+          "number": 12,
+          "type": "EXCLUSION",
+          "description": "Patient unwilling or unable to comply with INR monitoring",
+          "rationale": "Warfarin safety depends entirely on regular INR testing. Non-compliance = undetected over-anticoagulation.",
+          "table_column": "NOTEEVENTS → NER 'refuses blood tests', 'non-compliant', 'missed follow-up' pattern",
+          "n2c2_tag": "MAKES-DECISIONS",
+          "icd9_raw": "N/A",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "patient",
+              "unwilling",
+              "unable"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "NCT00000560": {
+    "trial_id": "NCT00000560",
+    "title": "Heart Failure with Reduced Ejection Fraction (Lisinopril)",
+    "medicine": "Lisinopril",
+    "version": "1.0",
+    "total_criteria": 27,
+    "inclusion_count": 14,
+    "exclusion_count": 13,
+    "criteria": {
+      "inclusion": [
+        {
+          "criterion_id": "LIS-INC-01",
+          "number": 1,
+          "type": "INCLUSION",
+          "description": "Age ≥ 21 AND ≤ 80 years",
+          "rationale": "SOLVD trial range. Under 21 = pediatric HF (different etiology); over 80 = too frail for ACE inhibitor.",
+          "table_column": "PATIENTS.DOB → compute age BETWEEN 21 AND 80 at enrollment",
+          "n2c2_tag": "AGE",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.95",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "age",
+            "min_age": 21,
+            "max_age": 80
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-02",
+          "number": 2,
+          "type": "INCLUSION",
+          "description": "Confirmed Heart Failure diagnosis (ICD-9 428.x)",
+          "rationale": "Must have documented HF — primary eligibility. All sub-types: systolic, diastolic, combined.",
+          "table_column": "DIAGNOSES_ICD.ICD9_CODE LIKE '428%' (428.0=CHF, 428.1=LHFS, 428.2x=Systolic)",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "428.0, 428.2x",
+          "target_score": "≥ 0.95",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "428.0",
+              "428.2x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-03",
+          "number": 3,
+          "type": "INCLUSION",
+          "description": "Ejection Fraction (EF) < 40% — Reduced EF (HFrEF)",
+          "rationale": "Lisinopril proven ONLY for reduced EF heart failure (HFrEF). Not effective in preserved-EF (HFpEF).",
+          "table_column": "NOTEEVENTS → Bio_ClinicalBERT NER: 'ejection fraction <X%', 'EF=X%', 'LVEF X%' → X < 40",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "428.22",
+          "target_score": "≥ 0.90",
+          "borderline_action": "EF 40-45% → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "428.22"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-04",
+          "number": 4,
+          "type": "INCLUSION",
+          "description": "NYHA Class II or III symptoms (moderate heart failure)",
+          "rationale": "NYHA II = slight activity limitation; NYHA III = marked limitation. ACE inhibitors best for these.",
+          "table_column": "NOTEEVENTS → NER: 'NYHA class II', 'NYHA class III', 'moderate heart failure', 'class 2/3'",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "428.1",
+          "target_score": "≥ 0.85",
+          "borderline_action": "NYHA I or IV → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "428.1"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-05",
+          "number": 5,
+          "type": "INCLUSION",
+          "description": "Systolic Blood Pressure ≥ 90 mmHg at baseline",
+          "rationale": "ACE inhibitors lower blood pressure. Starting in hypotensive patient → dangerous BP drop → shock.",
+          "table_column": "CHARTEVENTS.ITEMID=51 (SBP), VALUENUM ≥ 90 at time of enrollment",
+          "n2c2_tag": "BP",
+          "icd9_raw": "401.x",
+          "target_score": "≥ 0.90",
+          "borderline_action": "SBP 90-100 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "sbp",
+            "op": ">=",
+            "threshold": 90.0
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-06",
+          "number": 6,
+          "type": "INCLUSION",
+          "description": "Serum Potassium 3.5 – 5.0 mEq/L (normal potassium)",
+          "rationale": "ACE inhibitors retain potassium (block aldosterone). Must start with normal K+ to avoid hyperkalemia.",
+          "table_column": "LABEVENTS.ITEMID=50971 (Potassium), VALUENUM BETWEEN 3.5 AND 5.0",
+          "n2c2_tag": "ELECTROLYTES",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.92",
+          "borderline_action": "K 5.0-5.5 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "potassium",
+            "op": ">",
+            "threshold": 3.5,
+            "max_threshold": 5.0
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-07",
+          "number": 7,
+          "type": "INCLUSION",
+          "description": "Serum Creatinine < 2.5 mg/dL (mild-moderate renal impairment acceptable)",
+          "rationale": "Lisinopril can be used with mild-moderate CKD — actually protects kidneys in diabetics.",
+          "table_column": "LABEVENTS.ITEMID=50912 (Creatinine), VALUENUM < 2.5",
+          "n2c2_tag": "CREATININE",
+          "icd9_raw": "585.3",
+          "target_score": "≥ 0.90",
+          "borderline_action": "Cr 2.0-2.5 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "creatinine",
+            "op": "<",
+            "threshold": 2.5
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-08",
+          "number": 8,
+          "type": "INCLUSION",
+          "description": "Sodium level ≥ 130 mEq/L (no severe hyponatremia)",
+          "rationale": "Severe hyponatremia in HF indicates advanced disease — ACE inhibitor may worsen fluid imbalance.",
+          "table_column": "LABEVENTS.ITEMID=50983 (Sodium), VALUENUM ≥ 130",
+          "n2c2_tag": "ELECTROLYTES",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.88",
+          "borderline_action": "Na 130-135 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "category": "lab",
+            "lab_name": "sodium",
+            "op": ">=",
+            "threshold": 130.0
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-09",
+          "number": 9,
+          "type": "INCLUSION",
+          "description": "Currently on stable diuretic therapy (Furosemide or equivalent)",
+          "rationale": "ACE inhibitor added on top of diuretic is standard HF treatment protocol (evidence-based combo).",
+          "table_column": "PRESCRIPTIONS.DRUG LIKE '%furosemide%' OR '%torsemide%' OR '%bumetanide%'",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.82",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "medication",
+            "drugs": [
+              "furosemide"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-10",
+          "number": 10,
+          "type": "INCLUSION",
+          "description": "No other ACE inhibitor or ARB currently prescribed",
+          "rationale": "Cannot use two ACE inhibitors together — redundant and increases side effect risk.",
+          "table_column": "PRESCRIPTIONS.DRUG LIKE '%pril' OR '%sartan' → check NOT currently active",
+          "n2c2_tag": "DRUG-INTER",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.90",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "medication",
+            "drugs": [
+              "ace inhibitor",
+              "arb"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-11",
+          "number": 11,
+          "type": "INCLUSION",
+          "description": "Brain Natriuretic Peptide (BNP) ≥ 100 pg/mL OR NT-proBNP ≥ 300 pg/mL",
+          "rationale": "BNP is heart stress biomarker. Elevated confirms active heart failure justifying treatment.",
+          "table_column": "LABEVENTS.ITEMID=50963(BNP) OR 50889(NT-proBNP) → VALUENUM thresholds",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "LAB VALUE",
+          "target_score": "≥ 0.85",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "brain",
+              "natriuretic",
+              "peptide"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-12",
+          "number": 12,
+          "type": "INCLUSION",
+          "description": "Ability to tolerate ACE inhibitor (no prior intolerance documented)",
+          "rationale": "Some patients develop ACE inhibitor cough or other intolerance — must confirm no prior issues.",
+          "table_column": "PRESCRIPTIONS history + NOTEEVENTS → NER 'cough from ACE', 'stopped lisinopril'",
+          "n2c2_tag": "ALLERGY",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.88",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": true,
+            "category": "medication",
+            "drugs": [
+              "ace inhibitor"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-13",
+          "number": 13,
+          "type": "INCLUSION",
+          "description": "6-Minute Walk Test distance ≥ 100 meters (functional capacity)",
+          "rationale": "Confirms patient has some exercise capacity — too frail = end-stage HF (NYHA IV, excluded).",
+          "table_column": "NOTEEVENTS → NER '6-minute walk', '6MWT', 'exercise tolerance' → extract distance value",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.78",
+          "borderline_action": "< 0.75 → BORDERLINE",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "minute",
+              "walk",
+              "test"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-INC-14",
+          "number": 14,
+          "type": "INCLUSION",
+          "description": "Written informed consent obtained prior to any study procedure",
+          "rationale": "Mandatory ethical and regulatory requirement for all clinical trial participants.",
+          "table_column": "NOTEEVENTS → NER 'informed consent', 'consented', 'agreed to participate in study'",
+          "n2c2_tag": "MAKES-DECISIONS",
+          "icd9_raw": "N/A",
+          "target_score": "≥ 0.95",
+          "borderline_action": "Refusal → Hard exclusion",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "note_nlp",
+            "keywords": [
+              "consent"
+            ]
+          }
+        }
+      ],
+      "exclusion": [
+        {
+          "criterion_id": "LIS-EXC-01",
+          "number": 1,
+          "type": "EXCLUSION",
+          "description": "Prior ACE inhibitor-induced angioedema (any ACE inhibitor)",
+          "rationale": "Angioedema = life-threatening throat swelling. CLASS contraindication — even different ACE inhibitor.",
+          "table_column": "NOTEEVENTS → NER 'angioedema', 'lip swelling', 'throat swelling' + PRESCRIPTIONS ACE inhibitors",
+          "n2c2_tag": "ALLERGY",
+          "icd9_raw": "995.1",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "995.1"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-02",
+          "number": 2,
+          "type": "EXCLUSION",
+          "description": "Serum Creatinine > 3.0 mg/dL (severe renal impairment)",
+          "rationale": "ACE inhibitors reduce renal perfusion in diseased kidneys — acute kidney failure risk.",
+          "table_column": "LABEVENTS.ITEMID=50912 (Creatinine), VALUENUM > 3.0",
+          "n2c2_tag": "RENAL-FAIL",
+          "icd9_raw": "585.5, 585.6",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "category": "lab",
+            "lab_name": "creatinine",
+            "op": ">",
+            "threshold": 3.0
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-03",
+          "number": 3,
+          "type": "EXCLUSION",
+          "description": "Serum Potassium > 5.5 mEq/L (hyperkalemia at baseline)",
+          "rationale": "ACE inhibitors INCREASE potassium. Starting with high K+ → fatal cardiac arrhythmia.",
+          "table_column": "LABEVENTS.ITEMID=50971 (Potassium), VALUENUM > 5.5",
+          "n2c2_tag": "ELECTROLYTES",
+          "icd9_raw": "276.7",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "category": "lab",
+            "lab_name": "potassium",
+            "op": ">",
+            "threshold": 5.5
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-04",
+          "number": 4,
+          "type": "EXCLUSION",
+          "description": "Systolic Blood Pressure < 90 mmHg (hypotension) at enrollment",
+          "rationale": "ACE inhibitor will further drop BP → cardiogenic shock → death.",
+          "table_column": "CHARTEVENTS.ITEMID=51 (SBP), VALUENUM < 90 at screening",
+          "n2c2_tag": "BP",
+          "icd9_raw": "458.x",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "category": "lab",
+            "lab_name": "sbp",
+            "op": "<",
+            "threshold": 90.0
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-05",
+          "number": 5,
+          "type": "EXCLUSION",
+          "description": "Bilateral renal artery stenosis (confirmed or suspected)",
+          "rationale": "ACE inhibitor blocks compensatory angiotensin II → bilateral RAS = acute renal failure.",
+          "table_column": "DIAGNOSES_ICD 440.1 (renal artery stenosis) OR NOTEEVENTS → 'bilateral RAS', 'renal artery'",
+          "n2c2_tag": "RENAL-STRUCT",
+          "icd9_raw": "440.1",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "440.1"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-06",
+          "number": 6,
+          "type": "EXCLUSION",
+          "description": "Pregnancy or breastfeeding",
+          "rationale": "ACE inhibitors are TERATOGENIC (Category D) — fetal renal agenesis and death reported.",
+          "table_column": "NOTEEVENTS → NER 'pregnant', 'breastfeeding' + PATIENTS.GENDER=F + reproductive age",
+          "n2c2_tag": "PREG",
+          "icd9_raw": "V22.x",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "V22.x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-07",
+          "number": 7,
+          "type": "EXCLUSION",
+          "description": "NYHA Class IV Heart Failure (end-stage, symptoms at rest)",
+          "rationale": "End-stage HF patients are too hemodynamically unstable. ACE inhibitor initiation requires stability.",
+          "table_column": "NOTEEVENTS → NER 'NYHA class IV', 'symptoms at rest', 'NYHA 4', 'end-stage heart failure'",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "428.23",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "428.23"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-08",
+          "number": 8,
+          "type": "EXCLUSION",
+          "description": "Aortic stenosis (severe valvular obstruction)",
+          "rationale": "ACE inhibitor vasodilation in severe aortic stenosis → precipitous BP drop → syncope/death.",
+          "table_column": "DIAGNOSES_ICD 424.1 (aortic stenosis) OR NOTEEVENTS → 'severe AS', 'critical aortic stenosis'",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "424.1",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "424.1"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-09",
+          "number": 9,
+          "type": "EXCLUSION",
+          "description": "Hypertrophic Obstructive Cardiomyopathy (HOCM)",
+          "rationale": "HOCM with fixed outflow obstruction — vasodilation worsens obstruction and causes syncope.",
+          "table_column": "DIAGNOSES_ICD 425.1 (HOCM) OR NOTEEVENTS → 'hypertrophic cardiomyopathy', 'HOCM'",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "425.1",
+          "target_score": "0.0 (auto-reject)",
+          "borderline_action": "Hard exclusion — no appeal",
+          "is_hard_exclusion": true,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "425.1"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-10",
+          "number": 10,
+          "type": "EXCLUSION",
+          "description": "Recent Myocardial Infarction < 4 weeks ago",
+          "rationale": "Acute MI phase — hemodynamic instability. ACE inhibitor initiation deferred until stable (4-week window).",
+          "table_column": "DIAGNOSES_ICD 410.x (AMI) → ADMISSIONS.ADMITTIME date check < 4 weeks",
+          "n2c2_tag": "CARDIAC",
+          "icd9_raw": "410.9",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate (4-6 wks)",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "410.9"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-11",
+          "number": 11,
+          "type": "EXCLUSION",
+          "description": "Currently on dual RAAS blockade (ACE inhibitor + ARB + Aldosterone antagonist)",
+          "rationale": "Triple RAAS blockade causes severe hyperkalemia and renal failure — protocol excludes this combination.",
+          "table_column": "PRESCRIPTIONS → check for active ACE inhibitor AND ARB AND aldosterone antagonist simultaneously",
+          "n2c2_tag": "DRUG-INTER",
+          "icd9_raw": "N/A",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "medication",
+            "drugs": [
+              "ace inhibitor",
+              "arb"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-12",
+          "number": 12,
+          "type": "EXCLUSION",
+          "description": "Active malignancy with expected survival < 1 year",
+          "rationale": "Terminal cancer: benefit of long-term HF therapy does not outweigh trial burden for patient.",
+          "table_column": "DIAGNOSES_ICD 140.x-208.x (malignancy) + NOTEEVENTS → prognosis notes → survival estimate",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "140.x",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "140.x"
+            ]
+          }
+        },
+        {
+          "criterion_id": "LIS-EXC-13",
+          "number": 13,
+          "type": "EXCLUSION",
+          "description": "Chronic obstructive pulmonary disease (COPD) requiring frequent hospitalizations",
+          "rationale": "Severe COPD causes cor pulmonale (right HF) — a different HF etiology not addressed by this trial.",
+          "table_column": "DIAGNOSES_ICD 491.x, 492.x, 496 (COPD) + ADMISSIONS frequency > 2 per year",
+          "n2c2_tag": "N/A",
+          "icd9_raw": "491.0, 492.0",
+          "target_score": "< 0.75 → BORDERLINE",
+          "borderline_action": "Matcher-Compliance debate",
+          "is_hard_exclusion": false,
+          "rule": {
+            "is_negative": false,
+            "category": "icd9",
+            "codes": [
+              "491.0",
+              "492.0"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

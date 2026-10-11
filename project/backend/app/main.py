@@ -3,7 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .core.config import settings
 from .api.router import api_router
-from .db.database import init_db
+try:
+    from .db.database import init_db
+except ImportError:
+    async def init_db():
+        pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

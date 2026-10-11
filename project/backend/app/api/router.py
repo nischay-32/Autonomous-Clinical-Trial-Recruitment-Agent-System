@@ -6,41 +6,65 @@ from ..agents.orchestrator import run_recruitment_pipeline
 
 api_router = APIRouter()
 
-DEMO_TRIALS = {
-    "NCT00005143": {
-        "id": "NCT00005143",
-        "title": "Metformin Clinical Trial for Diabetes Management",
-        "medicine": "metformin",
-        "criteria_rules": {
-            "min_age": 18,
-            "max_age": 75,
-            "required_icd9": ["250.00", "250.02"],
-            "excluded_icd9": ["584.9"],  # Acute kidney failure
+import json
+from pathlib import Path
+
+RULES_FILE = Path(__file__).resolve().parents[1] / "db" / "trials_criteria_v1.json"
+
+def _load_trials():
+    if RULES_FILE.exists():
+        with open(RULES_FILE, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+            return {
+                tid: {
+                    "id": tid,
+                    "title": t["title"],
+                    "medicine": t["medicine"],
+                    "total_criteria": t.get("total_criteria", 0),
+                    "criteria_rules": t,
+                }
+                for tid, t in raw.items()
+            }
+    return {
+        "NCT00005143": {
+            "id": "NCT00005143",
+            "title": "Metformin Clinical Trial for Diabetes Management",
+            "medicine": "metformin",
+            "total_criteria": 28,
+            "criteria_rules": {
+                "min_age": 18,
+                "max_age": 75,
+                "required_icd9": ["250.00", "250.02"],
+                "excluded_icd9": ["584.9"],
+            },
         },
-    },
-    "NCT00262600": {
-        "id": "NCT00262600",
-        "title": "Warfarin Anticoagulation Efficacy Protocol",
-        "medicine": "warfarin",
-        "criteria_rules": {
-            "min_age": 21,
-            "max_age": 85,
-            "required_icd9": ["427.31"],  # Atrial fibrillation
-            "excluded_icd9": ["459.0"],  # Hemorrhage
+        "NCT0262600": {
+            "id": "NCT00262600",
+            "title": "Warfarin Anticoagulation Efficacy Protocol",
+            "medicine": "warfarin",
+            "total_criteria": 26,
+            "criteria_rules": {
+                "min_age": 21,
+                "max_age": 85,
+                "required_icd9": ["427.31"],
+                "excluded_icd9": ["459.0"],
+            },
         },
-    },
-    "NCT00000560": {
-        "id": "NCT00000560",
-        "title": "Lisinopril Hypertension Assessment Protocol",
-        "medicine": "lisinopril",
-        "criteria_rules": {
-            "min_age": 18,
-            "max_age": 80,
-            "required_icd9": ["401.9"],  # Hypertension
-            "excluded_icd9": ["995.1"],  # Angioedema
+        "NCT00000560": {
+            "id": "NCT00000560",
+            "title": "Lisinopril Hypertension Assessment Protocol",
+            "medicine": "lisinopril",
+            "total_criteria": 27,
+            "criteria_rules": {
+                "min_age": 18,
+                "max_age": 80,
+                "required_icd9": ["401.9"],
+                "excluded_icd9": ["995.1"],
+            },
         },
-    },
-}
+    }
+
+DEMO_TRIALS = _load_trials()
 
 class PatientPayload(BaseModel):
     subject_id: str
