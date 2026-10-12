@@ -27,6 +27,33 @@
   --color-muted-bg:   #F1F5F9;
 
   --sidebar-width: 240px;
+
+  /* ── Apple Liquid Glass & Material Tokens (Phase 1) ────────── */
+  --glass-bg:          rgba(255, 255, 255, 0.78);
+  --glass-bg-subtle:   rgba(255, 255, 255, 0.55);
+  --glass-bg-dark:     rgba(15, 23, 42, 0.85);
+  --glass-border:      rgba(255, 255, 255, 0.65);
+  --glass-border-subtle: rgba(226, 232, 240, 0.7);
+  --glass-blur:        blur(20px) saturate(190%);
+  --glass-blur-subtle: blur(12px) saturate(160%);
+  --glass-specular:    inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  --glass-shadow:      0 8px 32px 0 rgba(15, 23, 42, 0.06);
+  --glass-shadow-lg:   0 16px 48px -8px rgba(15, 23, 42, 0.12);
+
+  /* ── Apple Spring Physics (WWDC Fluid Motion) ─────────────── */
+  --spring-snappy:     cubic-bezier(0.2, 0.9, 0.3, 1);
+  --spring-fluid:      cubic-bezier(0.16, 1, 0.3, 1);
+  --spring-bouncy:     cubic-bezier(0.34, 1.45, 0.64, 1);
+  --spring-ease:       cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+:root {
+  /* Surface Glass Tokens */
+  --liquid-glass-bg: rgba(255, 255, 255, 0.82);
+  --liquid-glass-border: rgba(226, 232, 240, 0.8);
+  --liquid-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --spring-duration-snappy: 220ms;
+  --spring-duration-fluid: 380ms;
 }
 
 /* ── Base Reset ───────────────────────────────────────────────── */
@@ -267,4 +294,93 @@ tr:hover td {
   font-size: 13px;
   font-weight: 500;
   border: 1px solid #334155;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: spring-slide-in 240ms var(--spring-snappy) forwards;
 }
+
+/* ── Apple Liquid Glass Material Layer (Phase 1) ─────────────── */
+.liquid-glass {
+  background: var(--liquid-glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--liquid-glass-border);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.liquid-glass-subtle {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  box-shadow: 0 4px 20px 0 rgba(15, 23, 42, 0.03);
+}
+
+.liquid-glass-dark {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ── Apple Spring Physics Classes & Motion ───────────────────── */
+.spring-transition {
+  transition: all 260ms var(--spring-snappy);
+}
+
+.spring-card {
+  transition: transform 220ms var(--spring-snappy), box-shadow 220ms var(--spring-snappy), border-color 200ms ease;
+}
+
+.spring-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}
+
+.spring-press:active {
+  transform: scale(0.98);
+  transition: transform 120ms var(--spring-snappy);
+}
+
+/* Animated Queue Item Exit / Enter */
+.item-exit-animating {
+  opacity: 0;
+  transform: scale(0.96) translateX(12px);
+  transition: all 280ms var(--spring-fluid);
+  pointer-events: none;
+}
+
+.item-enter-animating {
+  animation: spring-item-in 300ms var(--spring-snappy) forwards;
+}
+
+@keyframes spring-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spring-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Subtle medical grid background */
+.bg-grid-pattern {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
+}
+

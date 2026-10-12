@@ -293,8 +293,8 @@ export default function PatientsPage() {
 
         {/* ── SCREEN PATIENT MODAL DIALOG ───────────────────────── */}
         {showScreenModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white border border-[#CBD5E1] rounded-[8px] max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white/95 backdrop-blur-xl border border-white/80 rounded-[8px] max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto ring-1 ring-slate-900/5">
               <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
                 <div>
                   <h2 className="text-base font-bold text-[#0F172A] tracking-tight">Screen Patient Record</h2>

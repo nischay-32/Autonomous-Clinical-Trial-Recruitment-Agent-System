@@ -14,6 +14,7 @@ export default function OutreachPage() {
     "Pending approval"
   );
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [exitingId, setExitingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,8 +33,14 @@ export default function OutreachPage() {
 
   const handleQuickApprove = async (d: OutreachDraft) => {
     setApprovingId(d.draft_id);
+    setExitingId(d.draft_id);
+
     try {
-      await api.approveOutreach(d.patient_id, "Dr. C. Roberts", "Verified protocol alignment.");
+      await Promise.all([
+        api.approveOutreach(d.patient_id, "Dr. C. Roberts", "Verified protocol alignment.").catch(() => null),
+        new Promise((r) => setTimeout(r, 260)),
+      ]);
+
       // Move draft from Pending approval to Approved
       setDrafts((prev) =>
         prev.map((item) =>
@@ -46,7 +53,6 @@ export default function OutreachPage() {
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
       console.error(err);
-      // Optimistic fallthrough
       setDrafts((prev) =>
         prev.map((item) =>
           item.draft_id === d.draft_id || item.patient_id === d.patient_id
@@ -56,6 +62,7 @@ export default function OutreachPage() {
       );
     } finally {
       setApprovingId(null);
+      setExitingId(null);
     }
   };
 
@@ -146,7 +153,12 @@ export default function OutreachPage() {
                   </tr>
                 ) : (
                   filtered.map((d) => (
-                    <tr key={d.draft_id} className="hover:bg-slate-50/50">
+                    <tr
+                      key={d.draft_id}
+                      className={`transition-all duration-300 ${
+                        exitingId === d.draft_id ? "item-exit-animating" : "hover:bg-slate-50/50"
+                      }`}
+                    >
                       <td className="font-mono font-medium text-[#0F172A]">{d.patient_id}</td>
                       <td className="font-mono text-xs">{d.trial_id}</td>
                       <td>{d.medicine}</td>

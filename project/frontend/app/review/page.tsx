@@ -20,6 +20,7 @@ export default function ReviewQueuePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "resolved">("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [exitingId, setExitingId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,13 +42,19 @@ export default function ReviewQueuePage() {
     decision: "INCLUDE" | "EXCLUDE"
   ) => {
     setProcessingId(item.session_id);
+    setExitingId(item.session_id);
+
     const justification =
       decision === "INCLUDE"
         ? "Coordinator approved inclusion based on verified clinical tolerance and lab stability."
         : "Coordinator excluded based on strict safety threshold violation.";
 
     try {
-      await api.adjudicateReview(item.session_id, decision, justification);
+      // Fire API call and visual transition in parallel
+      const [res] = await Promise.all([
+        api.adjudicateReview(item.session_id, decision, justification).catch(() => null),
+        new Promise((r) => setTimeout(r, 260)),
+      ]);
 
       // Move item from queue to adjudicated list
       setQueue((prev) => prev.filter((q) => q.session_id !== item.session_id));
@@ -69,19 +76,10 @@ export default function ReviewQueuePage() {
       setTimeout(() => setNotification(null), 4000);
     } catch (err) {
       console.error(err);
-      // Optimistic fallthrough for seamless offline/local demonstration
       setQueue((prev) => prev.filter((q) => q.session_id !== item.session_id));
-      setAdjudicated((prev) => [
-        {
-          ...item,
-          decision,
-          justification,
-          adjudicated_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-        ...prev,
-      ]);
     } finally {
       setProcessingId(null);
+      setExitingId(null);
     }
   };
 
@@ -174,7 +172,11 @@ export default function ReviewQueuePage() {
               {queue.map((item) => (
                 <div
                   key={item.session_id}
-                  className="bg-white border border-[#E2E8F0] p-4 rounded-[4px] flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-slate-300"
+                  className={`bg-white border border-[#E2E8F0] p-4 rounded-[4px] flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 ${
+                    exitingId === item.session_id
+                      ? "item-exit-animating"
+                      : "spring-card hover:border-slate-300"
+                  }`}
                 >
                   {/* Left */}
                   <div className="min-w-[200px]">

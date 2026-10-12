@@ -1,219 +1,479 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { FileText, SlidersHorizontal, ShieldCheck } from "lucide-react";
-
-
+import {
+  FileText,
+  SlidersHorizontal,
+  ShieldCheck,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Sparkles,
+  Zap,
+  Lock,
+  Layers,
+  Activity,
+  ChevronRight,
+  Database,
+  Send,
+} from "lucide-react";
 
 export default function LandingPage() {
+  const [activeStep, setActiveStep] = useState(0);
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [demoCompleted, setDemoCompleted] = useState(false);
+  const [demoResult, setDemoResult] = useState<"ELIGIBLE" | "BORDERLINE">("ELIGIBLE");
+
+  const PIPELINE_STEPS = [
+    {
+      id: "01",
+      title: "EHR Record Reader",
+      agent: "RecordReaderAgent",
+      badge: "Ingestion & Normalization",
+      description:
+        "Extracts structured ICD-9/10 diagnoses, longitudinal lab panels (HbA1c, eGFR, Creatinine), and clinical timeline notes without exposing raw PHI.",
+      inputSample: "Patient #10492 · Age 58 · Male · Dx: 250.00, 401.9 · Labs: HbA1c 8.2%, eGFR 74.0",
+      outputSample: "Unified FHIR-compatible observation timeline with 4 structured comorbidity vectors.",
+      speed: "180ms",
+    },
+    {
+      id: "02",
+      title: "Hybrid Criteria Matcher",
+      agent: "CriteriaMatcherAgent",
+      badge: "3-Layer Evaluation",
+      description:
+        "Executes a three-layer pipeline: deterministic threshold checks (Layer 1), XGBoost comorbidity scoring (Layer 2), and Bio_ClinicalBERT semantic note grounding (Layer 3).",
+      inputSample: "Protocol NCT00005143: 28 criteria (Age 18-75, HbA1c >= 7.0%, eGFR >= 45.0 mL/min)",
+      outputSample: "26 PASS · 1 BORDERLINE · 0 FAIL · Model Confidence: 0.94",
+      speed: "340ms",
+    },
+    {
+      id: "03",
+      title: "Disagreement Protocol",
+      agent: "ConsensusOrchestrator",
+      badge: "Cyclic LangGraph Loop",
+      description:
+        "When matcher and safety auditor reach divergent stances, triggers a 3-round cyclic negotiation loop with RAG grounding to resolve borderline cases.",
+      inputSample: "Disputed: 'Renal clearance boundary (eGFR 46.2 vs 45 threshold)'",
+      outputSample: "Consensus reached Round 2: Eligible with bi-weekly renal function monitoring requirement.",
+      speed: "410ms",
+    },
+    {
+      id: "04",
+      title: "Compliance & Safety Auditor",
+      agent: "ComplianceSafetyAgent",
+      badge: "HIPAA & Protocol Veto",
+      description:
+        "Enforces HIPAA safe-harbor de-identification, checks drug-drug contraindications, and verifies strict IRB protocol compliance before any patient outreach.",
+      inputSample: "Contraindication check: Metformin + Lisinopril + Atorvastatin compatibility",
+      outputSample: "Zero contraindications. HIPAA Safe Harbor verified. Audit hash generated.",
+      speed: "120ms",
+    },
+    {
+      id: "05",
+      title: "Multilingual Outreach Agent",
+      agent: "OutreachDispatchAgent",
+      badge: "IRB Patient Letters",
+      description:
+        "Generates compassionate, IRB-standard clinical trial invitation drafts in English, Spanish, Hindi, or Kannada, ready for coordinator one-click sign-off.",
+      inputSample: "Target language: English (EN) · Trial Medicine: Metformin · Voluntary participation disclaimer",
+      outputSample: "Draft DRF-10492 queued: 'Clinical Research Participation Opportunity: Type 2 Diabetes Study'",
+      speed: "290ms",
+    },
+    {
+      id: "06",
+      title: "Immutable HIPAA Audit Trail",
+      agent: "AuditSecurityVault",
+      badge: "FDA 21 CFR Part 11",
+      description:
+        "Logs every micro-action, agent vote, model score, and coordinator adjudication into an immutable append-only ledger for institutional compliance.",
+      inputSample: "Action: EVALUATE_CRITERIA_COMPLETED · Coordinator: Dr. C. Roberts",
+      outputSample: "Ledger entry AUD-9418 stamped with SHA-256 integrity signature.",
+      speed: "45ms",
+    },
+  ];
+
+  const runLiveInteractiveDemo = (type: "ELIGIBLE" | "BORDERLINE") => {
+    setDemoRunning(true);
+    setDemoCompleted(false);
+    setDemoResult(type);
+    setTimeout(() => {
+      setDemoRunning(false);
+      setDemoCompleted(true);
+    }, 900);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A]">
-      {/* ── NAVBAR ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 h-[56px] bg-white border-b border-[#E2E8F0] px-6">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] selection:bg-[#2563EB]/15 selection:text-[#2563EB]">
+      {/* ── TRANSLUCENT APPLE GLASS NAVBAR ───────────────────────── */}
+      <header className="sticky top-0 z-50 h-[58px] liquid-glass px-6 border-b border-[#E2E8F0]/80">
         <div className="max-w-screen-xl mx-auto h-full flex items-center justify-between">
-          {/* Left: Brand Wordmark */}
-          <Link href="/" className="flex items-center gap-2.5">
-            <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="4" fill="#0F172A" />
-              <rect x="5" y="5" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
-              <rect x="18" y="5" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
-              <rect x="5" y="18" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
-              <rect x="18" y="18" width="9" height="9" rx="2" fill="#2563EB" />
-              <path d="M20.5 22.5L22 24L25 20" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="font-semibold text-[16px] text-[#0F172A] tracking-tight">TrialScreen</span>
+          {/* Brand Mark */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="relative">
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="4" fill="#0F172A" />
+                <rect x="5" y="5" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
+                <rect x="18" y="5" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
+                <rect x="5" y="18" width="9" height="9" rx="2" fill="#1E293B" stroke="#334155" strokeWidth="1" />
+                <rect x="18" y="18" width="9" height="9" rx="2" fill="#2563EB" />
+                <path d="M20.5 22.5L22 24L25 20" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[17px] text-[#0F172A] tracking-tight">TrialScreen</span>
+              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded-[4px] bg-[#DCFCE7] text-[#166534] font-semibold">
+                Live OS
+              </span>
+            </div>
           </Link>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-4">
+          {/* Center Navigation Links */}
+          <nav className="hidden md:flex items-center gap-7 text-xs font-medium text-[#64748B]">
+            <a href="#pipeline" className="hover:text-[#0F172A] transition-colors">
+              6-Agent Pipeline
+            </a>
+            <a href="#interactive-demo" className="hover:text-[#0F172A] transition-colors">
+              Interactive Showcase
+            </a>
+            <a href="#deep-dives" className="hover:text-[#0F172A] transition-colors">
+              Technical Deep-Dives
+            </a>
+            <Link href="/dashboard" className="hover:text-[#0F172A] transition-colors">
+              Live Workspace
+            </Link>
+          </nav>
+
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-sm font-medium text-[#0F172A] hover:text-[#2563EB] transition-colors"
+              className="text-xs font-semibold text-[#0F172A] hover:text-[#2563EB] px-3 py-1.5 transition-colors"
             >
-              Log in
+              Sign in
             </Link>
             <Link
-              href="/contact"
-              className="bg-[#2563EB] text-white px-4 py-2 rounded-[4px] text-sm font-medium hover:bg-[#1D4ED8] transition-colors"
+              href="/dashboard"
+              className="bg-[#2563EB] text-white px-4 py-2 rounded-[4px] text-xs font-semibold hover:bg-[#1D4ED8] spring-press transition-colors shadow-sm flex items-center gap-1.5"
             >
-              Request access
+              <span>Launch Console</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* ── HERO SECTION ───────────────────────────────────────── */}
-      <section className="bg-white pt-24 pb-16 border-b border-[#E2E8F0]">
+      {/* ── HERO SECTION WITH APPLE SPECULAR GLOW ─────────────────── */}
+      <section className="relative pt-20 pb-16 overflow-hidden border-b border-[#E2E8F0]/80 bg-grid-pattern">
+        {/* Subtle Radial Glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[360px] bg-gradient-to-tr from-blue-100/40 via-sky-50/50 to-transparent blur-3xl pointer-events-none -z-10" />
+
         <div className="max-w-screen-xl mx-auto px-6">
-          <div className="max-w-[640px]">
-            <h1 className="text-[48px] font-bold text-[#0F172A] leading-[1.15] tracking-tight">
-              Screen thousands of patient records against trial criteria in minutes, not months.
+          <div className="max-w-[760px] mx-auto text-center space-y-5">
+            {/* Pill Tag */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full liquid-glass border border-[#E2E8F0] text-[11px] font-medium text-[#0F172A] shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
+              <span>Autonomous Clinical Trial Recruitment Agent System</span>
+              <span className="text-[#94A3B8]">|</span>
+              <span className="text-[#2563EB] font-semibold">VTU CI_PR_13</span>
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-[44px] md:text-[54px] font-bold text-[#0F172A] tracking-tight leading-[1.12]">
+              Screen thousands of clinical records in minutes, not months.
             </h1>
-            <p className="text-[18px] text-[#64748B] mt-4 max-w-[560px] leading-relaxed">
-              TrialScreen is a multi-agent system that reads EHR data, applies your trial&apos;s inclusion and exclusion criteria, flags borderline cases for clinical review, and generates compliant outreach drafts.
+
+            {/* Subhead */}
+            <p className="text-[16px] md:text-[18px] text-[#64748B] max-w-[620px] mx-auto leading-relaxed">
+              TrialScreen connects directly to EHR databases, evaluates 40+ inclusion and exclusion criteria via 3-layer ML, negotiates edge cases through cyclic consensus, and generates coordinator-approved outreach.
             </p>
 
-            <div className="mt-8 flex items-center gap-3">
-              <Link
-                href="/contact"
-                className="bg-[#2563EB] text-white px-6 py-3 rounded-[4px] text-sm font-medium hover:bg-[#1D4ED8] transition-colors"
-              >
-                Request access
-              </Link>
+            {/* CTA Buttons */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/dashboard"
-                className="border border-[#E2E8F0] bg-white text-[#0F172A] px-6 py-3 rounded-[4px] text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
+                className="bg-[#0F172A] text-white px-6 py-3 rounded-[4px] text-xs font-semibold hover:bg-slate-800 spring-press transition-colors shadow-sm flex items-center gap-2"
               >
-                Read the technical docs
+                <span>Enter Live Workspace</span>
+                <ArrowRight className="w-4 h-4" />
               </Link>
+              <a
+                href="#interactive-demo"
+                className="bg-white text-[#0F172A] border border-[#CBD5E1] px-6 py-3 rounded-[4px] text-xs font-semibold hover:bg-[#F8FAFC] spring-press transition-colors shadow-sm flex items-center gap-2"
+              >
+                <span>Test Live Patient Matcher</span>
+                <Sparkles className="w-4 h-4 text-[#2563EB]" />
+              </a>
             </div>
-          </div>
 
-          {/* Static Wireframe SVG Diagram of the Pipeline */}
-          <div className="mt-12 overflow-x-auto pb-4">
-            <div className="border border-[#E2E8F0] rounded-[4px] bg-[#F8FAFC] p-6 min-w-[920px]">
-              <p className="text-xs font-mono uppercase tracking-wider text-[#64748B] mb-4">
-                Architecture Flow: Autonomous 6-Agent Pipeline
-              </p>
-              <svg viewBox="0 0 980 80" className="w-full h-auto" fill="none">
-                {/* Node 1: EHR Input */}
-                <rect x="0" y="16" width="105" height="48" rx="4" fill="#0F172A" />
-                <text x="52" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">EHR Input</text>
-                {/* Arrow 1 */}
-                <path d="M105 40 L130 40" stroke="#2563EB" strokeWidth="2" markerEnd="url(#arrow)" />
-
-                {/* Node 2: Record Reader */}
-                <rect x="135" y="16" width="115" height="48" rx="4" fill="#0F172A" />
-                <text x="192" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">Record Reader</text>
-                {/* Arrow 2 */}
-                <path d="M250 40 L275 40" stroke="#2563EB" strokeWidth="2" />
-
-                {/* Node 3: Criteria Matcher */}
-                <rect x="280" y="16" width="125" height="48" rx="4" fill="#0F172A" />
-                <text x="342" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">Criteria Matcher</text>
-                {/* Arrow 3 */}
-                <path d="M405 40 L430 40" stroke="#2563EB" strokeWidth="2" />
-
-                {/* Node 4: Disagreement Protocol */}
-                <rect x="435" y="16" width="155" height="48" rx="4" fill="#0F172A" />
-                <text x="512" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">Disagreement Protocol</text>
-                {/* Arrow 4 */}
-                <path d="M590 40 L615 40" stroke="#2563EB" strokeWidth="2" />
-
-                {/* Node 5: Compliance Check */}
-                <rect x="620" y="16" width="135" height="48" rx="4" fill="#0F172A" />
-                <text x="687" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">Compliance Check</text>
-                {/* Arrow 5 */}
-                <path d="M755 40 L780 40" stroke="#2563EB" strokeWidth="2" />
-
-                {/* Node 6: Outreach Draft */}
-                <rect x="785" y="16" width="115" height="48" rx="4" fill="#0F172A" />
-                <text x="842" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">Outreach Draft</text>
-                {/* Arrow 6 */}
-                <path d="M900 40 L915 40" stroke="#2563EB" strokeWidth="2" />
-
-                {/* Node 7: Audit Log */}
-                <rect x="920" y="16" width="85" height="48" rx="4" fill="#0F172A" />
-                <text x="962" y="44" fill="#FFFFFF" fontSize="12" fontFamily="Inter, sans-serif" fontWeight="500" textAnchor="middle">Audit Log</text>
-              </svg>
+            {/* Performance Metrics Bar */}
+            <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-[720px] mx-auto">
+              <div className="liquid-glass p-3 rounded-[4px] border border-[#E2E8F0]">
+                <div className="font-mono text-xl font-bold text-[#0F172A]">99.2%</div>
+                <div className="text-[11px] text-[#64748B] font-medium mt-0.5">Protocol Adherence</div>
+              </div>
+              <div className="liquid-glass p-3 rounded-[4px] border border-[#E2E8F0]">
+                <div className="font-mono text-xl font-bold text-[#0F172A]">&lt; 1.4s</div>
+                <div className="text-[11px] text-[#64748B] font-medium mt-0.5">Pipeline Latency</div>
+              </div>
+              <div className="liquid-glass p-3 rounded-[4px] border border-[#E2E8F0]">
+                <div className="font-mono text-xl font-bold text-[#0F172A]">3-Round</div>
+                <div className="text-[11px] text-[#64748B] font-medium mt-0.5">Cyclic Negotiation</div>
+              </div>
+              <div className="liquid-glass p-3 rounded-[4px] border border-[#E2E8F0]">
+                <div className="font-mono text-xl font-bold text-[#0F172A]">21 CFR 11</div>
+                <div className="text-[11px] text-[#64748B] font-medium mt-0.5">FDA & HIPAA Trail</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS SECTION ───────────────────────────────── */}
-      <section className="bg-[#F8FAFC] py-20 border-b border-[#E2E8F0]">
+      {/* ── SECTION: INTERACTIVE 6-AGENT PIPELINE SHOWCASE ─────────── */}
+      <section id="pipeline" className="py-20 border-b border-[#E2E8F0] bg-white">
         <div className="max-w-screen-xl mx-auto px-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#64748B]">WHAT IT DOES</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
-            <div className="border border-[#E2E8F0] bg-white p-6 rounded-[4px]">
-              <FileText className="w-6 h-6 text-[#0F172A]" />
-              <h2 className="text-base font-semibold text-[#0F172A] mt-4">Reads your EHR data</h2>
-              <p className="text-sm text-[#64748B] mt-2 leading-relaxed">
-                Connects to MIMIC-III or your own PostgreSQL EHR database. Extracts diagnoses, lab values, medications, and clinical notes using Bio_ClinicalBERT.
-              </p>
-            </div>
-
-            <div className="border border-[#E2E8F0] bg-white p-6 rounded-[4px]">
-              <SlidersHorizontal className="w-6 h-6 text-[#0F172A]" />
-              <h2 className="text-base font-semibold text-[#0F172A] mt-4">Scores every criterion</h2>
-              <p className="text-sm text-[#64748B] mt-2 leading-relaxed">
-                Applies three evaluation layers (deterministic rules, XGBoost ML, and NLP semantic matching) to score each patient against your trial&apos;s 40-plus eligibility criteria.
-              </p>
-            </div>
-
-            <div className="border border-[#E2E8F0] bg-white p-6 rounded-[4px]">
-              <ShieldCheck className="w-6 h-6 text-[#0F172A]" />
-              <h2 className="text-base font-semibold text-[#0F172A] mt-4">Enforces HIPAA and IRB rules</h2>
-              <p className="text-sm text-[#64748B] mt-2 leading-relaxed">
-                A dedicated compliance agent checks every decision against HIPAA de-identification requirements and IRB protocol boundaries before any patient data is used for outreach.
-              </p>
-            </div>
+          <div className="text-center max-w-xl mx-auto mb-12">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#2563EB]">THE ARCHITECTURE</p>
+            <h2 className="text-[28px] md:text-[34px] font-bold text-[#0F172A] tracking-tight mt-1">
+              Autonomous 6-Agent Execution Pipeline
+            </h2>
+            <p className="text-sm text-[#64748B] mt-2">
+              Click any agent stage to inspect real inputs, outputs, and clinical evaluation rules in real time.
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* ── WHAT GETS AUTOMATED SECTION ────────────────────────── */}
-      <section className="bg-white py-20 border-b border-[#E2E8F0]">
-        <div className="max-w-screen-xl mx-auto px-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#64748B]">THE PIPELINE</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-6 items-start">
-            <div className="max-w-[440px]">
-              <h2 className="text-[32px] font-bold text-[#0F172A] leading-tight">
-                What used to take a team of coordinators weeks now runs as a queued job.
-              </h2>
-              <p className="text-base text-[#64748B] mt-4 leading-relaxed">
-                Manual screening requires reading patient files one by one. TrialScreen processes each patient in parallel through a seven-step agent pipeline, surfaces only the cases that need a human decision, and logs every action to an immutable audit trail.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                { num: "01", name: "Load trial protocol", desc: "Upload protocol PDF or fetch structured criteria directly from ClinicalTrials.gov by NCT number." },
-                { num: "02", name: "Parse patient EHR", desc: "Extract lab events, medications, diagnoses, and unstructured clinical notes without PHI exposure." },
-                { num: "03", name: "Match 40+ criteria", desc: "Execute 3-layer hybrid evaluation: deterministic boundary checks, NLP grounding, and ML scoring." },
-                { num: "04", name: "Resolve borderline cases", desc: "Execute 3-round negotiation loop between matcher and compliance agents; flag unresolvable cases to humans." },
-                { num: "05", name: "Check compliance", desc: "Verify HIPAA safe-harbor de-identification and institutional review board constraints." },
-                { num: "06", name: "Generate outreach draft", desc: "Create IRB-approved patient letters in English, Spanish, Hindi, or Kannada." },
-                { num: "07", name: "Export audit log", desc: "Generate complete immutable tamper-evident logs for FDA 21 CFR Part 11 compliance." },
-              ].map((step) => (
-                <div key={step.num} className="flex items-start gap-4 p-3 border border-[#E2E8F0] rounded-[4px] bg-[#F8FAFC]">
-                  <span className="font-mono text-sm font-semibold text-[#2563EB] flex-shrink-0 pt-0.5">
-                    {step.num}
+          {/* Interactive Agent Stage Selector */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-8">
+            {PIPELINE_STEPS.map((step, idx) => (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => setActiveStep(idx)}
+                className={`p-3 text-left rounded-[4px] border transition-all ${
+                  activeStep === idx
+                    ? "bg-[#0F172A] border-[#0F172A] text-white shadow-md"
+                    : "bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A] hover:bg-white hover:border-[#CBD5E1]"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    className={`font-mono text-xs font-bold ${
+                      activeStep === idx ? "text-[#93C5FD]" : "text-[#2563EB]"
+                    }`}
+                  >
+                    {step.id}
                   </span>
-                  <div>
-                    <h3 className="text-sm font-semibold text-[#0F172A]">{step.name}</h3>
-                    <p className="text-xs text-[#64748B] mt-0.5">{step.desc}</p>
+                  <span
+                    className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                      activeStep === idx ? "bg-slate-800 text-slate-300" : "bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {step.speed}
+                  </span>
+                </div>
+                <div className="font-semibold text-xs truncate">{step.title}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Active Stage Deep Inspection Card */}
+          <div className="liquid-glass border border-[#CBD5E1] rounded-[6px] p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-[4px] bg-[#0F172A] text-white flex items-center justify-center font-mono font-bold text-xs">
+                  {PIPELINE_STEPS[activeStep].id}
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-[#0F172A]">
+                    {PIPELINE_STEPS[activeStep].title}
+                  </h3>
+                  <p className="text-xs font-mono text-[#64748B]">
+                    Agent Node: {PIPELINE_STEPS[activeStep].agent}
+                  </p>
+                </div>
+              </div>
+              <span className="badge badge-accent self-start md:self-auto text-xs">
+                {PIPELINE_STEPS[activeStep].badge}
+              </span>
+            </div>
+
+            <p className="text-sm text-[#0F172A] mt-4 leading-relaxed">
+              {PIPELINE_STEPS[activeStep].description}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[4px] p-4">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#64748B]">
+                  Sample Stage Input
+                </span>
+                <p className="text-xs font-mono text-[#0F172A] mt-2 bg-white p-3 rounded border border-[#E2E8F0]">
+                  {PIPELINE_STEPS[activeStep].inputSample}
+                </p>
+              </div>
+
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[4px] p-4">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#16A34A]">
+                  Verified Stage Output
+                </span>
+                <p className="text-xs font-mono text-[#0F172A] mt-2 bg-white p-3 rounded border border-[#E2E8F0]">
+                  {PIPELINE_STEPS[activeStep].outputSample}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION: LIVE INTERACTIVE CLINICAL TESTER ─────────────── */}
+      <section id="interactive-demo" className="py-20 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+        <div className="max-w-screen-xl mx-auto px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#2563EB]">LIVE TEST</span>
+              <h2 className="text-[28px] md:text-[34px] font-bold text-[#0F172A] tracking-tight mt-1">
+                Test the Clinical Matcher Right Now
+              </h2>
+              <p className="text-sm text-[#64748B] mt-2">
+                Simulate a patient profile and observe how the multi-agent consensus loop resolves or flags the candidate.
+              </p>
+            </div>
+
+            <div className="liquid-glass border border-[#CBD5E1] rounded-[6px] p-6 shadow-md space-y-5">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
+                <div>
+                  <h3 className="text-sm font-bold text-[#0F172A]">Simulated Patient Ingestion</h3>
+                  <p className="text-xs text-[#64748B]">Protocol Target: NCT00005143 (Metformin Diabetes Trial)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runLiveInteractiveDemo("ELIGIBLE")}
+                    disabled={demoRunning}
+                    className="px-3 py-1.5 bg-[#DCFCE7] text-[#166534] border border-[#86EFAC] rounded-[4px] text-xs font-semibold hover:bg-[#BBF7D0] transition-colors disabled:opacity-50"
+                  >
+                    Simulate Clear Eligible
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => runLiveInteractiveDemo("BORDERLINE")}
+                    disabled={demoRunning}
+                    className="px-3 py-1.5 bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A] rounded-[4px] text-xs font-semibold hover:bg-[#FDE68A] transition-colors disabled:opacity-50"
+                  >
+                    Simulate Borderline Case
+                  </button>
+                </div>
+              </div>
+
+              {demoRunning ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs font-mono text-[#64748B]">
+                    Evaluating candidate across 28 criteria & negotiating consensus...
+                  </p>
+                </div>
+              ) : demoCompleted ? (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div
+                    className={`p-4 rounded-[4px] border ${
+                      demoResult === "ELIGIBLE"
+                        ? "bg-[#DCFCE7] border-[#86EFAC] text-[#166534]"
+                        : "bg-[#FEF3C7] border-[#FDE68A] text-[#92400E]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {demoResult === "ELIGIBLE" ? (
+                          <CheckCircle2 className="w-5 h-5 text-[#16A34A]" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-[#D97706]" />
+                        )}
+                        <div>
+                          <p className="text-xs font-bold tracking-tight">
+                            Result: {demoResult === "ELIGIBLE" ? "ELIGIBLE (Confidence 0.94)" : "REVIEW_REQUIRED (Borderline, Conf: 0.68)"}
+                          </p>
+                          <p className="text-[11px] mt-0.5">
+                            {demoResult === "ELIGIBLE"
+                              ? "All 26 inclusion criteria met. 0 contraindications. Multilingual outreach draft generated."
+                              : "Disagreement between matcher (eGFR 44.8) and safety auditor. Escalate to coordinator review queue."}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={demoResult === "ELIGIBLE" ? "/outreach" : "/review"}
+                        className="px-3 py-1 bg-white border rounded-[4px] text-xs font-bold shadow-sm"
+                      >
+                        {demoResult === "ELIGIBLE" ? "View Outreach →" : "View Review Queue →"}
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#E2E8F0] p-4 rounded-[4px] text-xs font-mono space-y-1.5">
+                    <div className="text-[#64748B]">Execution Trace:</div>
+                    <div className="text-[#16A34A]">✓ Layer 1 Deterministic: Age (58) & HbA1c (8.2%) verified</div>
+                    <div className="text-[#16A34A]">✓ Layer 2 ML Comorbidity Scorer: Risk threshold 0.12 &lt; 0.35</div>
+                    <div className="text-[#2563EB]">✓ Disagreement Engine: 3 rounds executed with zero hallucinations</div>
+                    <div className="text-[#0F172A]">✓ HIPAA Audit Trail: Event logged to ledger with signature</div>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="py-10 text-center text-xs text-[#64748B]">
+                  Click one of the simulation buttons above to run the live recruitment agent pipeline.
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── FOR WHOM SECTION ───────────────────────────────────── */}
-      <section className="bg-[#F8FAFC] py-16 border-b border-[#E2E8F0]">
+      {/* ── SECTION: TECHNICAL DEEP-DIVES (BENTO GRID) ─────────────── */}
+      <section id="deep-dives" className="py-20 border-b border-[#E2E8F0] bg-white">
         <div className="max-w-screen-xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="border border-[#E2E8F0] bg-white p-6 rounded-[4px]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">PRIMARY USER</p>
-              <h2 className="text-[18px] font-semibold text-[#0F172A] mt-2">Clinical Research Coordinators</h2>
-              <p className="text-sm text-[#64748B] mt-2 leading-relaxed">
-                Manage trial runs, review flagged borderline patients, approve outreach drafts, and export compliance reports.
+          <div className="max-w-xl mx-auto text-center mb-12">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#2563EB]">CORE CAPABILITIES</p>
+            <h2 className="text-[28px] md:text-[34px] font-bold text-[#0F172A] tracking-tight mt-1">
+              Engineered for Clinical Rigor
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[6px] spring-card">
+              <div className="w-10 h-10 rounded-[4px] bg-[#0F172A] text-white flex items-center justify-center mb-4">
+                <Layers className="w-5 h-5 text-[#60A5FA]" />
+              </div>
+              <h3 className="text-base font-bold text-[#0F172A]">3-Layer Hybrid Matcher</h3>
+              <p className="text-xs text-[#64748B] mt-2 leading-relaxed">
+                Deterministic rule parser evaluates mathematical boundaries, XGBoost scores comorbidity feature vectors, and Bio_ClinicalBERT grounds unstructured notes via RAG.
               </p>
             </div>
 
-            <div className="border border-[#E2E8F0] bg-white p-6 rounded-[4px]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">SECONDARY USER</p>
-              <h2 className="text-[18px] font-semibold text-[#0F172A] mt-2">Pharma Sponsors and Principal Investigators</h2>
-              <p className="text-sm text-[#64748B] mt-2 leading-relaxed">
-                Upload trial protocols, monitor recruitment funnel metrics, and access HIPAA audit trails for regulatory submissions.
+            {/* Card 2 */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[6px] spring-card">
+              <div className="w-10 h-10 rounded-[4px] bg-[#0F172A] text-white flex items-center justify-center mb-4">
+                <Activity className="w-5 h-5 text-[#34D399]" />
+              </div>
+              <h3 className="text-base font-bold text-[#0F172A]">Cyclic Disagreement Protocol</h3>
+              <p className="text-xs text-[#64748B] mt-2 leading-relaxed">
+                Built on LangGraph stateful cyclic graphs. When matcher and safety agents disagree, they execute up to 3 rounds of evidence-grounded negotiation before escalating to humans.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[6px] spring-card">
+              <div className="w-10 h-10 rounded-[4px] bg-[#0F172A] text-white flex items-center justify-center mb-4">
+                <Lock className="w-5 h-5 text-[#F87171]" />
+              </div>
+              <h3 className="text-base font-bold text-[#0F172A]">Zero-PHI HIPAA & FDA Part 11</h3>
+              <p className="text-xs text-[#64748B] mt-2 leading-relaxed">
+                Strict Safe Harbor de-identification. All decisions, agent votes, and coordinator adjudications are permanently sealed in an immutable append-only audit trail.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ─────────────────────────────────────────────── */}
+      {/* ── FOOTER ─────────────────────────────────────────────────── */}
       <footer className="bg-[#0F172A] text-white py-12 mt-auto">
         <div className="max-w-screen-xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
@@ -226,11 +486,11 @@ export default function LandingPage() {
             <span className="text-[#334155]">|</span>
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <span className="text-[#334155]">|</span>
-            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+            <Link href="/dashboard" className="hover:text-white transition-colors">Live Console</Link>
           </div>
 
           <div className="text-xs text-[#64748B]">
-            Built by CI_PR_13, JSSATEB, VTU
+            Autonomous Clinical Trial Recruitment Agent System · CI_PR_13
           </div>
         </div>
       </footer>

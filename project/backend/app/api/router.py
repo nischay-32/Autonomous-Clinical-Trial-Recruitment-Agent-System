@@ -27,28 +27,48 @@ def _hash_password(password: str, salt: str = "") -> tuple[str, str]:
     return hashed, salt
 
 _DEMO_SALT = "9f8e7d6c5b4a3210"
-_USERS_DB = {
-    "croberts@memorial-cancer.org": {
-        "id": "usr-1",
-        "email": "croberts@memorial-cancer.org",
-        "password_hash": _hash_password("demo123", _DEMO_SALT)[0],
-        "salt": _DEMO_SALT,
-        "full_name": "Dr. Christopher Roberts",
-        "job_title": "Lead Clinical Research Coordinator",
-        "organization": "Memorial Cancer & Clinical Research Institute",
-        "role": "Coordinator",
-    },
-    "admin@trialscreen.io": {
-        "id": "usr-2",
-        "email": "admin@trialscreen.io",
-        "password_hash": _hash_password("admin123", _DEMO_SALT)[0],
-        "salt": _DEMO_SALT,
-        "full_name": "Dr. Elena Vance",
-        "job_title": "Institutional Administrator",
-        "organization": "TrialScreen Operations",
-        "role": "Admin",
-    },
-}
+_USERS_STORE_PATH = Path(__file__).resolve().parent.parent / "db" / "users_store.json"
+
+def _load_users_db() -> dict:
+    defaults = {
+        "croberts@memorial-cancer.org": {
+            "id": "usr-1",
+            "email": "croberts@memorial-cancer.org",
+            "password_hash": _hash_password("demo123", _DEMO_SALT)[0],
+            "salt": _DEMO_SALT,
+            "full_name": "Dr. Christopher Roberts",
+            "job_title": "Lead Clinical Research Coordinator",
+            "organization": "Memorial Cancer & Clinical Research Institute",
+            "role": "Coordinator",
+        },
+        "admin@trialscreen.io": {
+            "id": "usr-2",
+            "email": "admin@trialscreen.io",
+            "password_hash": _hash_password("admin123", _DEMO_SALT)[0],
+            "salt": _DEMO_SALT,
+            "full_name": "Dr. Elena Vance",
+            "job_title": "Institutional Administrator",
+            "organization": "TrialScreen Operations",
+            "role": "Admin",
+        },
+    }
+    if _USERS_STORE_PATH.exists():
+        try:
+            with open(_USERS_STORE_PATH, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                defaults.update(saved)
+        except Exception:
+            pass
+    return defaults
+
+def _save_users_db():
+    try:
+        with open(_USERS_STORE_PATH, "w", encoding="utf-8") as f:
+            json.dump(_USERS_DB, f, indent=2)
+    except Exception:
+        pass
+
+_USERS_DB = _load_users_db()
 
 class RegisterRequest(BaseModel):
     full_name: str
@@ -79,6 +99,7 @@ def register_user(req: RegisterRequest):
         "role": "Coordinator",
     }
     _USERS_DB[email_clean] = user_record
+    _save_users_db()
     token = f"tk_{uuid.uuid4().hex}"
     log_audit_event("AuthService", "USER_REGISTERED", user_id, "", {"email": email_clean, "org": req.organization})
     return {
