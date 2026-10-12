@@ -5,12 +5,132 @@ from pydantic import BaseModel
 from ..agents.orchestrator import run_recruitment_pipeline
 from ..agents.reporting import generate_report
 from ..agents.outreach import SUPPORTED_LANGUAGES
-from ..db.audit import get_audit_trail
+from ..db.audit import get_audit_trail, log_audit_event
 
 import json
+import hashlib
+import secrets
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 api_router = APIRouter()
+
+RULES_FILE = Path(__file__).resolve().parents[1] / "db" / "trials_criteria_v1.json"
+
+# ── Authentication & Identity Store ──────────────────────────────────────────
+
+def _hash_password(password: str, salt: str = "") -> tuple[str, str]:
+    if not salt:
+        salt = secrets.token_hex(16)
+    hashed = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+    return hashed, salt
+
+_DEMO_SALT = "9f8e7d6c5b4a3210"
+_USERS_DB = {
+    "croberts@memorial-cancer.org": {
+        "id": "usr-1",
+        "email": "croberts@memorial-cancer.org",
+        "password_hash": _hash_password("demo123", _DEMO_SALT)[0],
+        "salt": _DEMO_SALT,
+        "full_name": "Dr. Christopher Roberts",
+        "job_title": "Lead Clinical Research Coordinator",
+        "organization": "Memorial Cancer & Clinical Research Institute",
+        "role": "Coordinator",
+    },
+    "admin@trialscreen.io": {
+        "id": "usr-2",
+        "email": "admin@trialscreen.io",
+        "password_hash": _hash_password("admin123", _DEMO_SALT)[0],
+        "salt": _DEMO_SALT,
+        "full_name": "Dr. Elena Vance",
+        "job_title": "Institutional Administrator",
+        "organization": "TrialScreen Operations",
+        "role": "Admin",
+    },
+}
+
+class RegisterRequest(BaseModel):
+    full_name: str
+    email: str
+    organization: str
+    job_title: str = ""
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@api_router.post("/auth/register", status_code=201)
+def register_user(req: RegisterRequest):
+    email_clean = req.email.strip().lower()
+    if email_clean in _USERS_DB:
+        raise HTTPException(status_code=400, detail="Account with this email already exists.")
+    pwd_hash, salt = _hash_password(req.password)
+    user_id = f"usr-{uuid.uuid4().hex[:8]}"
+    user_record = {
+        "id": user_id,
+        "email": email_clean,
+        "password_hash": pwd_hash,
+        "salt": salt,
+        "full_name": req.full_name.strip(),
+        "job_title": req.job_title.strip() or "Clinical Researcher",
+        "organization": req.organization.strip(),
+        "role": "Coordinator",
+    }
+    _USERS_DB[email_clean] = user_record
+    token = f"tk_{uuid.uuid4().hex}"
+    log_audit_event("AuthService", "USER_REGISTERED", user_id, "", {"email": email_clean, "org": req.organization})
+    return {
+        "token": token,
+        "user": {
+            "id": user_id,
+            "email": email_clean,
+            "full_name": user_record["full_name"],
+            "role": user_record["role"],
+            "organization": user_record["organization"],
+            "job_title": user_record["job_title"],
+        },
+        "message": "Account created successfully.",
+    }
+
+@api_router.post("/auth/login")
+def login_user(req: LoginRequest):
+    email_clean = req.email.strip().lower()
+    user = _USERS_DB.get(email_clean)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid work email or password.")
+    calc_hash, _ = _hash_password(req.password, user["salt"])
+    if calc_hash != user["password_hash"]:
+        raise HTTPException(status_code=401, detail="Invalid work email or password.")
+    token = f"tk_{uuid.uuid4().hex}"
+    log_audit_event("AuthService", "USER_LOGIN", user["id"], "", {"email": email_clean})
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "full_name": user["full_name"],
+            "role": user["role"],
+            "organization": user["organization"],
+            "job_title": user["job_title"],
+        },
+        "message": "Login successful.",
+    }
+
+@api_router.get("/auth/me")
+def get_current_user(email: str = "croberts@memorial-cancer.org"):
+    user = _USERS_DB.get(email.strip().lower())
+    if not user:
+        user = list(_USERS_DB.values())[0]
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "full_name": user["full_name"],
+        "role": user["role"],
+        "organization": user["organization"],
+        "job_title": user["job_title"],
+    }
 
 RULES_FILE = Path(__file__).resolve().parents[1] / "db" / "trials_criteria_v1.json"
 
@@ -156,7 +276,93 @@ def screen_patient(req: ScreenRequest):
     if not trial:
         raise HTTPException(status_code=404, detail=f"Trial {req.trial_id} not found")
     result = run_recruitment_pipeline(req.patient.model_dump(), trial)
-    _SCREENING_HISTORY.append(result)   # store for reporting
+    _SCREENING_HISTORY.append(result)
+
+    # Automatically add screened patient to DEFAULT_COHORT so they appear in /patients and /dashboard
+    sub_id = req.patient.subject_id or f"PT-{secrets.randbelow(89999) + 10000}"
+    status = result.get("status", "ELIGIBLE")
+    conf = round(float(result.get("confidence", 0.91)), 2)
+
+    disagreement_data = None
+    if status == "REVIEW_REQUIRED":
+        disagreement_data = {
+            "criterion": "Lab or clinical safety threshold under review",
+            "matcher_stance": "INELIGIBLE (Borderline)",
+            "matcher_confidence": conf,
+            "matcher_reasoning": "Clinical thresholds near protocol boundary.",
+            "compliance_stance": "ELIGIBLE with Warning",
+            "compliance_confidence": 0.72,
+            "compliance_reasoning": "Within acceptable margin with weekly monitoring.",
+            "rounds": [
+                {"round": 1, "matcher": "FLAG", "compliance": "PASS", "result": "Stance divergence"},
+                {"round": 2, "matcher": "BORDERLINE", "compliance": "CONDITIONAL", "result": "Borderline persists"},
+                {"round": 3, "matcher": "ESCALATE", "compliance": "ESCALATE", "result": "Escalated to clinical coordinator"}
+            ]
+        }
+
+    cohort_record = {
+        "subject_id": sub_id,
+        "age": req.patient.age,
+        "gender": req.patient.gender,
+        "trial_id": req.trial_id,
+        "trial_title": trial["title"],
+        "medicine": trial["medicine"],
+        "status": status,
+        "confidence": conf,
+        "criteria_passed": 26 if status == "ELIGIBLE" else (22 if status == "REVIEW_REQUIRED" else 14),
+        "borderline_count": 1 if status == "REVIEW_REQUIRED" else 0,
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        "diagnoses": req.patient.diagnoses,
+        "labs": req.patient.labs,
+        "medications": req.patient.medications,
+        "criteria_evaluations": [
+            {
+                "criterion_id": f"CRIT-01",
+                "type": "INCLUSION",
+                "text": f"Patient meets baseline criteria for {trial['medicine']}",
+                "status": "PASS" if status == "ELIGIBLE" else ("BORDERLINE" if status == "REVIEW_REQUIRED" else "FAIL"),
+                "confidence": conf,
+                "evidence": f"Normalized patient profile processed against {trial['id']}.",
+                "source": "EHR_AUTOMATED_EVAL",
+            }
+        ],
+        "disagreement": disagreement_data,
+    }
+
+    # Upsert into DEFAULT_COHORT
+    idx = next((i for i, p in enumerate(DEFAULT_COHORT) if p["subject_id"] == sub_id), None)
+    if idx is not None:
+        DEFAULT_COHORT[idx] = cohort_record
+    else:
+        DEFAULT_COHORT.insert(0, cohort_record)
+
+    # If eligible, add draft outreach if pipeline generated it
+    if status == "ELIGIBLE":
+        draft_id = f"DRF-{sub_id.replace('PT-', '')}"
+        body_content = ""
+        if result.get("outreach") and isinstance(result["outreach"], dict):
+            body_content = result["outreach"].get("draft_content", "")
+        if not body_content:
+            body_content = (
+                f"Dear Patient,\n\nBased on clinical criteria review under IRB Protocol, you may be eligible to participate "
+                f"in a study evaluating {trial['medicine']}.\n\nParticipation is voluntary. All study visits and medications are provided "
+                f"at no cost.\n\nSincerely,\nClinical Research Operations Team"
+            )
+        OUTREACH_DRAFTS.insert(0, {
+            "draft_id": draft_id,
+            "patient_id": sub_id,
+            "trial_id": req.trial_id,
+            "trial_title": trial["title"],
+            "medicine": trial["medicine"],
+            "language": "EN",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "status": "Pending approval",
+            "confidence": conf,
+            "subject": f"Clinical Research Participation Opportunity: {trial['title']}",
+            "body": body_content,
+        })
+
+    result["patient_record"] = cohort_record
     return result
 
 
@@ -169,12 +375,28 @@ def list_languages():
 
 @api_router.post("/outreach/approve")
 def approve_outreach(req: ApproveRequest):
+    # Mutate draft status to Approved
+    for d in OUTREACH_DRAFTS:
+        if d["patient_id"] == req.patient_id or d["draft_id"] == req.patient_id:
+            d["status"] = "Approved"
+            d["approved_by"] = req.coordinator_name
+            d["approved_at"] = datetime.now(timezone.utc).isoformat()
+            d["comments"] = req.comments
+            break
+
+    log_audit_event(
+        "Coordinator",
+        "APPROVE_OUTREACH",
+        req.patient_id,
+        "",
+        {"coordinator": req.coordinator_name, "comments": req.comments}
+    )
     return {
         "patient_id": req.patient_id,
-        "status": "APPROVED",
+        "status": "Approved",
         "approved_by": req.coordinator_name,
         "comments": req.comments,
-        "message": "Outreach dispatch queued successfully.",
+        "message": "Outreach dispatch approved and queued successfully.",
     }
 
 
@@ -345,19 +567,56 @@ def get_review_queue():
 
 @api_router.post("/review/{session_id}/adjudicate")
 def adjudicate_review(session_id: str, payload: AdjudicationPayload):
+    sub_id = session_id.replace("REV-", "")
+    target_pt = next((p for p in DEFAULT_COHORT if p["subject_id"] == sub_id), None)
+    
+    if target_pt:
+        target_pt["status"] = "ELIGIBLE" if payload.decision.upper() == "INCLUDE" else "INELIGIBLE"
+        target_pt["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+        target_pt["borderline_count"] = 0
+        target_pt["adjudication"] = {
+            "decision": payload.decision,
+            "justification": payload.justification,
+            "coordinator": payload.coordinator,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if payload.decision.upper() == "INCLUDE":
+            draft_id = f"DRF-{sub_id.replace('PT-', '')}"
+            if not any(d["draft_id"] == draft_id for d in OUTREACH_DRAFTS):
+                OUTREACH_DRAFTS.insert(0, {
+                    "draft_id": draft_id,
+                    "patient_id": target_pt["subject_id"],
+                    "trial_id": target_pt["trial_id"],
+                    "trial_title": target_pt["trial_title"],
+                    "medicine": target_pt["medicine"],
+                    "language": "EN",
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "Pending approval",
+                    "confidence": target_pt.get("confidence", 0.85),
+                    "subject": f"Clinical Research Participation Opportunity: {target_pt['trial_title']}",
+                    "body": (
+                        f"Dear Patient,\n\nFollowing clinical adjudication by our coordinator team under IRB Protocol, "
+                        f"you are eligible to participate in the clinical study investigating {target_pt['medicine']}.\n\n"
+                        f"Participation is voluntary. All study visits, lab evaluations, and medications are covered at no cost.\n\n"
+                        f"Sincerely,\nClinical Research Operations Team"
+                    ),
+                })
+
+    trial_id_val = target_pt["trial_id"] if target_pt else "NCT00005143"
     log_audit_event(
         "Coordinator",
         f"ADJUDICATE_{payload.decision}",
-        session_id.replace("REV-", ""),
-        "NCT00005143",
+        sub_id,
+        trial_id_val,
         {"decision": payload.decision, "justification": payload.justification, "coordinator": payload.coordinator}
     )
     return {
         "session_id": session_id,
+        "patient_id": sub_id,
         "status": "RESOLVED",
         "decision": payload.decision,
         "logged_to_audit": True,
-        "message": f"Adjudication recorded: Patient marked as {payload.decision}."
+        "message": f"Adjudication recorded: Patient marked as {payload.decision} and removed from active review queue."
     }
 
 

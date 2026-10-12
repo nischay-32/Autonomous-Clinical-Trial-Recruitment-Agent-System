@@ -3,20 +3,37 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    // Simulate login and redirect to dashboard
-    setTimeout(() => {
+    try {
+      const res = await api.login({ email, password });
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("trialscreen_token", res.token);
+        sessionStorage.setItem("trialscreen_user", JSON.stringify(res.user));
+      }
       router.push("/dashboard");
-    }, 400);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid credentials. Please verify your work email and password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoFill = () => {
+    setEmail("croberts@memorial-cancer.org");
+    setPassword("demo123");
+    setError(null);
   };
 
   return (
@@ -56,7 +73,27 @@ export default function LoginPage() {
       <div className="bg-white flex flex-col justify-center px-8 sm:px-16 py-12">
         <div className="max-w-sm w-full mx-auto">
           <h1 className="text-[24px] font-bold text-[#0F172A] tracking-tight">Sign in to TrialScreen</h1>
-          <p className="text-sm text-[#64748B] mt-1 mb-8">Enter your work email and password.</p>
+          <p className="text-sm text-[#64748B] mt-1 mb-6">Enter your work email and password.</p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-[#FEE2E2] border border-[#FECACA] rounded-[4px] text-xs text-[#DC2626]">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-5 p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-[4px] flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-[#0F172A]">Demo Institutional Access</p>
+              <p className="text-[11px] text-[#64748B]">Dr. C. Roberts (Lead Coordinator)</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDemoFill}
+              className="px-2.5 py-1 bg-white border border-[#CBD5E1] text-[#2563EB] text-[11px] font-medium rounded-[4px] hover:bg-[#EFF6FF] transition-colors"
+            >
+              Fill Credentials
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

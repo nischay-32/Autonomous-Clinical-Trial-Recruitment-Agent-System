@@ -121,7 +121,7 @@ export interface ReportData {
     outreach_drafted: number;
     eligibility_rate: number;
   };
-  shap_summary: { feature: string; importance: number }[];
+  shap_summary: Record<string, unknown>[];
   audit_entries: AuditEntry[];
   total_audit_events: number;
 }
@@ -142,10 +142,45 @@ export interface TeamMember {
   joined: string;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  organization: string;
+  job_title: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+  message: string;
+}
+
+export interface ScreenPatientInput {
+  subject_id?: string;
+  age: number;
+  gender: string;
+  diagnoses: string[];
+  labs?: Record<string, number>;
+  medications?: string[];
+}
+
 // ── API calls ────────────────────────────────────────────────────
 
 export const api = {
   health: () => get<{ status: string }>("/health"),
+  login: (body: { email: string; password: string }) =>
+    post<AuthResponse>("/auth/login", body),
+  register: (body: {
+    full_name: string;
+    email: string;
+    organization: string;
+    job_title?: string;
+    password: string;
+  }) => post<AuthResponse>("/auth/register", body),
+  me: (email = "") => get<AuthUser>(`/auth/me${email ? `?email=${email}` : ""}`),
+
   trials: () => get<Trial[]>("/trials"),
   trial: (id: string) => get<Trial>(`/trials/${id}`),
   uploadProtocol: (body: {
@@ -159,6 +194,11 @@ export const api = {
   patients: (trial_id = "", decision = "") =>
     get<PatientRecord[]>(`/patients?trial_id=${trial_id}&decision=${decision}`),
   patient: (id: string) => get<PatientRecord>(`/patients/${id}`),
+  screen: (trial_id: string, patient: ScreenPatientInput) =>
+    post<{ status: string; confidence: number; patient_record: PatientRecord; outreach?: unknown }>("/screen", {
+      trial_id,
+      patient,
+    }),
   
   reviewQueue: () => get<ReviewQueueItem[]>("/review/queue"),
   adjudicateReview: (session_id: string, decision: "INCLUDE" | "EXCLUDE", justification: string) =>
@@ -170,7 +210,11 @@ export const api = {
   outreachDrafts: () => get<OutreachDraft[]>("/outreach/drafts"),
   outreachDraft: (id: string) => get<OutreachDraft>(`/outreach/drafts/${id}`),
   approveOutreach: (patient_id: string, coordinator_name: string, comments = "") =>
-    post("/outreach/approve", { patient_id, coordinator_name, comments }),
+    post<{ patient_id: string; status: string; approved_by: string; message: string }>("/outreach/approve", {
+      patient_id,
+      coordinator_name,
+      comments,
+    }),
 
   audit: (patient_id = "", limit = 100) =>
     get<AuditEntry[]>(`/audit?patient_id=${patient_id}&limit=${limit}`),

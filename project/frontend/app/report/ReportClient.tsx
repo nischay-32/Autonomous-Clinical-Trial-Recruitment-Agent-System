@@ -43,7 +43,7 @@ export default function ReportClient({ initialReport }: Props) {
   const [selectedTrial, setSelectedTrial] = useState("");
 
   const data = report ?? MOCK_REPORT;
-  const shap = (data.shap_summary as ShapItem[]) ?? [];
+  const shap = (data.shap_summary as unknown as ShapItem[]) ?? [];
   const maxShap = Math.max(...shap.map((s) => s.mean_abs_shap), 0.01);
 
   const handleRefresh = async () => {

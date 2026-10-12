@@ -58,3 +58,21 @@ class AuditLog(Base):
     agent_name: Mapped[str] = mapped_column(String(64))
     action: Mapped[str] = mapped_column(String(128))
     details: Mapped[dict] = mapped_column(JSON, default=dict)
+
+class Organization(Base):
+    __tablename__ = "organizations"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    irb_number: Mapped[str] = mapped_column(String(128), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    full_name: Mapped[str] = mapped_column(String(255))
+    job_title: Mapped[str] = mapped_column(String(128), default="")
+    organization_id: Mapped[str] = mapped_column(String(64), default="")
+    role: Mapped[str] = mapped_column(String(32), default="Coordinator")  # Coordinator, Admin, Viewer
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

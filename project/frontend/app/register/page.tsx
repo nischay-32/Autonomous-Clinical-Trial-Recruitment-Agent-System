@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Compute password strength (0-4)
@@ -35,7 +37,7 @@ export default function RegisterPage() {
     return "bg-[#16A34A]";
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
       setError("You must accept the terms to create an account.");
@@ -46,7 +48,25 @@ export default function RegisterPage() {
       return;
     }
     setError(null);
-    router.push("/dashboard");
+    setLoading(true);
+    try {
+      const res = await api.register({
+        full_name: fullName,
+        email,
+        organization,
+        job_title: jobTitle,
+        password,
+      });
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("trialscreen_token", res.token);
+        sessionStorage.setItem("trialscreen_user", JSON.stringify(res.user));
+      }
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to register account. Please check your details.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
