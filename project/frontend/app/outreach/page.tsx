@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
-import { api, OutreachDraft } from "@/lib/api";
-
-
+import { api, getStoredUser, OutreachDraft } from "@/lib/api";
 
 export default function OutreachPage() {
   const [drafts, setDrafts] = useState<OutreachDraft[]>([]);
@@ -13,8 +11,7 @@ export default function OutreachPage() {
   const [activeTab, setActiveTab] = useState<"Pending approval" | "Approved" | "Sent" | "Rejected">(
     "Pending approval"
   );
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [exitingId, setExitingId] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,19 +26,23 @@ export default function OutreachPage() {
       }
     }
     loadDrafts();
+
+    // Auto-refresh periodically so approved drafts automatically move to "Sent"
+    const interval = setInterval(() => {
+      api.outreachDrafts().then((data) => setDrafts(data)).catch(() => {});
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleQuickApprove = async (d: OutreachDraft) => {
-    setApprovingId(d.draft_id);
-    setExitingId(d.draft_id);
-
+    setProcessingId(d.draft_id);
     try {
-      await Promise.all([
-        api.approveOutreach(d.patient_id, "Dr. C. Roberts", "Verified protocol alignment.").catch(() => null),
-        new Promise((r) => setTimeout(r, 260)),
-      ]);
-
-      // Move draft from Pending approval to Approved
+      await api.approveOutreach(
+        d.patient_id,
+        getStoredUser()?.full_name || "Coordinator",
+        "Verified protocol alignment."
+      );
       setDrafts((prev) =>
         prev.map((item) =>
           item.draft_id === d.draft_id || item.patient_id === d.patient_id
@@ -49,20 +50,36 @@ export default function OutreachPage() {
             : item
         )
       );
-      setToast(`Outreach for ${d.patient_id} approved. Moved to "Approved" communications.`);
+      setToast(`Outreach for ${d.patient_id} approved.`);
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
       console.error(err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleQuickReject = async (d: OutreachDraft) => {
+    setProcessingId(d.draft_id);
+    try {
+      await api.rejectOutreach(
+        d.patient_id,
+        getStoredUser()?.full_name || "Coordinator",
+        "Clinical draft rejected by coordinator."
+      );
       setDrafts((prev) =>
         prev.map((item) =>
           item.draft_id === d.draft_id || item.patient_id === d.patient_id
-            ? { ...item, status: "Approved" }
+            ? { ...item, status: "Rejected" }
             : item
         )
       );
+      setToast(`Outreach for ${d.patient_id} rejected.`);
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      console.error(err);
     } finally {
-      setApprovingId(null);
-      setExitingId(null);
+      setProcessingId(null);
     }
   };
 
@@ -71,27 +88,20 @@ export default function OutreachPage() {
   return (
     <AppShell pageTitle="Outreach Drafts">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-[24px] font-bold text-[#0F172A] tracking-tight">Outreach drafts</h1>
-          <p className="text-sm text-[#64748B] mt-0.5">
-            Pre-generated multilingual outreach communications awaiting coordinator sign-off.
-          </p>
-        </div>
+        <p className="text-[13px] text-[#4d5663]">
+          Multilingual invitation letters. Nothing is sent until a coordinator approves.
+        </p>
 
         {toast && (
-          <div className="p-3 bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] rounded-[4px] text-xs flex items-center justify-between animate-in fade-in duration-200">
+          <div className="p-3 border border-[#b7e0c2] bg-[#e6f4ea] text-[#0f5c2e] text-[12px] flex items-center justify-between">
             <span>{toast}</span>
-            <button
-              onClick={() => setToast(null)}
-              className="text-[#047857] hover:text-[#065F46] font-bold text-sm ml-4"
-            >
-              ×
+            <button type="button" onClick={() => setToast(null)} className="font-semibold ml-4" aria-label="Dismiss">
+              x
             </button>
           </div>
         )}
 
-        {/* Tab row */}
-        <div className="flex border-b border-[#E2E8F0] gap-6 text-xs font-medium">
+        <div className="flex border-b border-[#d5d9e0] gap-6 text-[13px] font-semibold overflow-x-auto">
           {(["Pending approval", "Approved", "Sent", "Rejected"] as const).map((tab) => {
             const count = drafts.filter((d) => d.status === tab).length;
             return (
@@ -99,32 +109,18 @@ export default function OutreachPage() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`pb-2.5 transition-colors relative flex items-center gap-1.5 ${
-                  activeTab === tab
-                    ? "text-[#2563EB] font-semibold"
-                    : "text-[#64748B] hover:text-[#0F172A]"
+                className={`pb-2.5 relative whitespace-nowrap ${
+                  activeTab === tab ? "text-[#0b5f5a]" : "text-[#4d5663] hover:text-[#1a2332]"
                 }`}
               >
-                <span>{tab}</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    tab === "Pending approval" && count > 0
-                      ? "bg-[#FEF3C7] text-[#92400E]"
-                      : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {count}
-                </span>
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#2563EB]" />
-                )}
+                {tab} ({count})
+                {activeTab === tab && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0b5f5a]" />}
               </button>
             );
           })}
         </div>
 
-        {/* Table */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[4px] overflow-hidden">
+        <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table>
               <thead>
@@ -133,7 +129,7 @@ export default function OutreachPage() {
                   <th>Trial</th>
                   <th>Drug</th>
                   <th>Language</th>
-                  <th>Generated at</th>
+                  <th>Generated</th>
                   <th>Preview</th>
                   <th>Actions</th>
                 </tr>
@@ -147,47 +143,46 @@ export default function OutreachPage() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-16 text-center text-xs text-[#64748B]">
-                      No drafts in &ldquo;{activeTab}&rdquo; status.
+                    <td colSpan={7} className="py-12 text-center text-[13px] text-[#4d5663]">
+                      No drafts with status &ldquo;{activeTab}&rdquo;.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((d) => (
-                    <tr
-                      key={d.draft_id}
-                      className={`transition-all duration-300 ${
-                        exitingId === d.draft_id ? "item-exit-animating" : "hover:bg-slate-50/50"
-                      }`}
-                    >
-                      <td className="font-mono font-medium text-[#0F172A]">{d.patient_id}</td>
-                      <td className="font-mono text-xs">{d.trial_id}</td>
+                    <tr key={d.draft_id}>
+                      <td className="font-mono font-semibold">{d.patient_id}</td>
+                      <td className="font-mono text-[12px]">{d.trial_id}</td>
                       <td>{d.medicine}</td>
                       <td>
-                        <span className="badge badge-accent text-[10px]">{d.language}</span>
+                        <span className="badge badge-teal">{d.language}</span>
                       </td>
-                      <td className="font-mono text-xs text-[#64748B]">
-                        {new Date(d.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <td className="font-mono text-[12px] text-[#4d5663]">
+                        {new Date(d.generated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </td>
-                      <td className="text-xs text-[#64748B] italic max-w-xs truncate">
-                        {d.subject.slice(0, 80)}
-                      </td>
+                      <td className="text-[12px] text-[#4d5663] max-w-xs truncate">{d.subject.slice(0, 80)}</td>
                       <td>
                         <div className="flex items-center gap-2">
                           {d.status === "Pending approval" && (
-                            <button
-                              type="button"
-                              disabled={approvingId === d.draft_id}
-                              onClick={() => handleQuickApprove(d)}
-                              className="bg-[#16A34A] text-white px-2.5 py-1 rounded-[4px] text-xs font-medium hover:bg-[#15803D] transition-colors disabled:opacity-50"
-                              title="Approve for dispatch"
-                            >
-                              Approve
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                disabled={processingId === d.draft_id}
+                                onClick={() => handleQuickApprove(d)}
+                                className="btn btn-primary text-[12px] min-h-8 py-1"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                disabled={processingId === d.draft_id}
+                                onClick={() => handleQuickReject(d)}
+                                className="btn btn-danger text-[12px] min-h-8 py-1"
+                              >
+                                Reject
+                              </button>
+                            </>
                           )}
-                          <Link
-                            href={`/outreach/${d.draft_id}`}
-                            className="text-xs font-medium text-[#2563EB] hover:underline"
-                          >
+                          <Link href={`/outreach/${d.draft_id}`} className="text-[12px] font-semibold text-[#0b5f5a] hover:underline">
                             Review
                           </Link>
                         </div>

@@ -54,11 +54,36 @@ def run_recruitment_pipeline(patient_raw: dict, trial: dict) -> dict:
     if status == "ELIGIBLE":
         outreach_res = draft_outreach(profile["subject_id"], trial.get("title", "Clinical Study"))
         log_audit_event("OutreachAgent", "GENERATE_DRAFT", sub_id, trial_id, {"language": "en"})
-        
+
+    # 6. Synthesize Multi-Agent Calibrated Decision Confidence
+    total_criteria = max(matcher_res.get("criteria_evaluated", 1), 1)
+    met = matcher_res.get("criteria_met", 0)
+    failed = matcher_res.get("criteria_failed", 0)
+    ml_prob = matcher_res.get("layers", {}).get("ml_scorer", {}).get("probability", 0.5)
+    safety = compliance_res.get("safety_score", 1.0)
+
+    if status == "ELIGIBLE":
+        conf = round(0.88 + 0.08 * (met / total_criteria), 2)
+        conf = min(0.98, max(0.86, conf))
+    elif status == "REVIEW_REQUIRED":
+        bline_details = [d for d in matcher_res.get("details", []) if d.get("status") == "BORDERLINE"]
+        bline_avg = (sum(d.get("confidence", 0.70) for d in bline_details) / max(len(bline_details), 1)) if bline_details else 0.70
+        raw_b = 0.40 * (met / total_criteria) + 0.30 * bline_avg + 0.15 * ml_prob + 0.15 * safety
+        conf = round(0.58 + (raw_b * 0.22), 2)
+        conf = min(0.79, max(0.60, conf))
+    else:
+        fail_sev = (failed / total_criteria) * 3.0
+        safety_pen = 1.0 - safety
+        ml_non = 1.0 - ml_prob
+        hard_boost = 0.05 if matcher_res.get("hard_exclusion_triggered") else 0.0
+        raw_i = 0.82 + (0.07 * min(fail_sev, 1.0)) + (0.05 * safety_pen) + (0.03 * ml_non) + hard_boost
+        conf = round(min(0.98, max(0.82, raw_i)), 2)
+
     return {
         "subject_id": profile["subject_id"],
         "trial_id": trial_id,
         "status": status,
+        "confidence": conf,
         "matcher": matcher_res,
         "compliance": compliance_res,
         "consensus": consensus,

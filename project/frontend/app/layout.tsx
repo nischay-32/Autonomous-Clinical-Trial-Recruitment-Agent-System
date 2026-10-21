@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://trialscreen.org"),
   title: {
     template: "%s | TrialScreen",
-    default: "TrialScreen — Autonomous Clinical Trial Recruitment System",
+    default: "TrialScreen | Clinical trial eligibility screening",
   },
   description:
-    "Autonomous multi-agent system for clinical trial patient recruitment, EHR criteria matching, and HIPAA-compliant outreach.",
+    "TrialScreen evaluates electronic health records against clinical trial inclusion and exclusion criteria, then queues coordinator-approved outreach drafts.",
   icons: {
-    icon: "/favicon.svg",
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/logo.png" }],
   },
   robots: { index: false, follow: false },
 };
@@ -17,13 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body className="bg-[#F8FAFC] text-[#0F172A] antialiased">
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

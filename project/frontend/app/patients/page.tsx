@@ -1,22 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { api, PatientRecord, Trial } from "@/lib/api";
-import { Plus, X, CheckCircle2, AlertTriangle, XCircle, Sparkles } from "lucide-react";
+import { Plus, X, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 
 export default function PatientsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f4f5f7]" />}>
+      <PatientsInner />
+    </Suspense>
+  );
+}
+
+function PatientsInner() {
+  const searchParams = useSearchParams();
   const [patients, setPatients] = useState<PatientRecord[]>([]);
   const [trials, setTrials] = useState<Trial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTrial, setSelectedTrial] = useState("");
+  const [selectedTrial, setSelectedTrial] = useState(searchParams.get("trial_id") || "");
   const [selectedDecision, setSelectedDecision] = useState("All");
-  const [minConfidence, setMinConfidence] = useState(0.5);
+  const [minConfidence, setMinConfidence] = useState(0.0);
 
-  // Screen Patient Modal State
-  const [showScreenModal, setShowScreenModal] = useState(false);
-  const [screenTrialId, setScreenTrialId] = useState("NCT00005143");
+  const [showScreenModal, setShowScreenModal] = useState(searchParams.get("screen") === "1");
+  const [screenTrialId, setScreenTrialId] = useState(searchParams.get("trial_id") || "NCT00005143");
   const [screenSubjectId, setScreenSubjectId] = useState("PT-55291");
   const [screenAge, setScreenAge] = useState(58);
   const [screenGender, setScreenGender] = useState("M");
@@ -54,14 +63,8 @@ export default function PatientsPage() {
     setScreenResult(null);
 
     try {
-      const diagnosesArray = screenDiagnoses
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const medsArray = screenMeds
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const diagnosesArray = screenDiagnoses.split(",").map((s) => s.trim()).filter(Boolean);
+      const medsArray = screenMeds.split(",").map((s) => s.trim()).filter(Boolean);
       const labsObj: Record<string, number> = {};
       if (screenHbA1c) labsObj["HbA1c"] = parseFloat(screenHbA1c);
       if (screenEgfr) labsObj["eGFR"] = parseFloat(screenEgfr);
@@ -78,11 +81,9 @@ export default function PatientsPage() {
 
       const newRecord = res.patient_record;
       setScreenResult(newRecord);
-
-      // Immediately insert at the top of the patients cohort
       setPatients((prev) => [newRecord, ...prev.filter((p) => p.subject_id !== newRecord.subject_id)]);
     } catch (err: unknown) {
-      setScreenError(err instanceof Error ? err.message : "Screening evaluation failed. Check trial parameters.");
+      setScreenError(err instanceof Error ? err.message : "Screening failed. Check the trial and inputs.");
     } finally {
       setScreeningLoading(false);
     }
@@ -127,14 +128,10 @@ export default function PatientsPage() {
   return (
     <AppShell pageTitle="Patients">
       <div className="space-y-5">
-        {/* Header with Screen Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-[24px] font-bold text-[#0F172A] tracking-tight">Patients</h1>
-            <p className="text-xs text-[#64748B] mt-0.5">
-              Automated multi-agent cohort evaluation across inclusion and exclusion criteria.
-            </p>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <p className="text-[13px] text-[#4d5663]">
+            Cohort records evaluated against inclusion and exclusion criteria.
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -142,64 +139,52 @@ export default function PatientsPage() {
               setScreenError(null);
               setShowScreenModal(true);
             }}
-            className="btn btn-primary text-xs shadow-sm self-start sm:self-auto"
+            className="btn btn-primary self-start sm:self-auto"
           >
             <Plus className="w-3.5 h-3.5" />
-            Screen New Patient
+            Screen patient
           </button>
         </div>
 
-        {/* Filter row */}
-        <div className="bg-white border border-[#E2E8F0] p-4 rounded-[4px] flex flex-wrap items-center gap-6">
+        <div className="card flex flex-wrap items-end gap-6">
           <div className="w-56">
-            <label className="block text-xs font-medium text-[#64748B] mb-1">Trial</label>
-            <select
-              value={selectedTrial}
-              onChange={(e) => setSelectedTrial(e.target.value)}
-            >
-              <option value="">All Trials</option>
+            <label className="block text-[12px] font-semibold mb-1.5">Trial</label>
+            <select value={selectedTrial} onChange={(e) => setSelectedTrial(e.target.value)}>
+              <option value="">All trials</option>
               {trials.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.id} — {t.medicine}
+                  {t.id}: {t.medicine}
                 </option>
               ))}
             </select>
           </div>
-
           <div className="w-48">
-            <label className="block text-xs font-medium text-[#64748B] mb-1">Decision</label>
-            <select
-              value={selectedDecision}
-              onChange={(e) => setSelectedDecision(e.target.value)}
-            >
-              <option value="All">All Decisions</option>
+            <label className="block text-[12px] font-semibold mb-1.5">Decision</label>
+            <select value={selectedDecision} onChange={(e) => setSelectedDecision(e.target.value)}>
+              <option value="All">All</option>
               <option value="ELIGIBLE">Eligible</option>
               <option value="REVIEW_REQUIRED">Borderline / Review</option>
-              <option value="INELIGIBLE">Rejected</option>
+              <option value="INELIGIBLE">Ineligible</option>
             </select>
           </div>
-
           <div className="flex-1 min-w-[200px]">
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-medium text-[#64748B]">Confidence Floor</label>
-              <span className="font-mono text-xs font-medium text-[#0F172A]">
-                {(minConfidence * 100).toFixed(0)}%
-              </span>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="text-[12px] font-semibold">Minimum confidence</label>
+              <span className="font-mono text-[12px]">{(minConfidence * 100).toFixed(0)}%</span>
             </div>
             <input
               type="range"
-              min="0.4"
+              min="0.0"
               max="0.95"
               step="0.05"
               value={minConfidence}
               onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-[#E2E8F0] rounded-[2px] accent-[#2563EB] cursor-pointer"
+              className="w-full h-1.5 bg-[#d5d9e0] accent-[#0b5f5a]"
             />
           </div>
         </div>
 
-        {/* Patients Table */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[4px] overflow-hidden">
+        <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table>
               <thead>
@@ -208,11 +193,11 @@ export default function PatientsPage() {
                   <th>Age</th>
                   <th>Gender</th>
                   <th>Trial</th>
-                  <th>Overall decision</th>
+                  <th>Decision</th>
                   <th>Confidence</th>
                   <th>Criteria passed</th>
-                  <th>Borderline count</th>
-                  <th>Reviewed at</th>
+                  <th>Borderline</th>
+                  <th>Reviewed</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,8 +209,8 @@ export default function PatientsPage() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-xs text-[#64748B]">
-                      No patients match current filter parameters.
+                    <td colSpan={9} className="py-12 text-center text-[13px] text-[#4d5663]">
+                      No patients match the current filters.
                     </td>
                   </tr>
                 ) : (
@@ -233,54 +218,41 @@ export default function PatientsPage() {
                     const confPct = Math.round(pt.confidence * 100);
                     const barColor =
                       pt.confidence >= 0.85
-                        ? "bg-[#16A34A]"
+                        ? "bg-[#0b5f5a]"
                         : pt.confidence >= 0.65
-                        ? "bg-[#D97706]"
-                        : "bg-[#DC2626]";
+                        ? "bg-[#9a6700]"
+                        : "bg-[#b42318]";
 
                     return (
-                      <tr key={pt.subject_id}>
+                      <tr key={`${pt.subject_id}-${pt.trial_id}`}>
                         <td>
                           <Link
                             href={`/patients/${pt.subject_id}`}
-                            className="font-mono font-medium text-[#2563EB] hover:underline"
+                            className="font-mono font-semibold text-[#0b5f5a] hover:underline"
                           >
                             {pt.subject_id}
                           </Link>
                         </td>
-                        <td className="font-mono text-xs">{pt.age}</td>
+                        <td className="font-mono text-[12px]">{pt.age}</td>
                         <td>{pt.gender}</td>
-                        <td className="font-mono text-xs">{pt.trial_id}</td>
+                        <td className="font-mono text-[12px]">{pt.trial_id}</td>
                         <td>
-                          {pt.status === "ELIGIBLE" && (
-                            <span className="badge badge-success">Eligible</span>
-                          )}
-                          {pt.status === "REVIEW_REQUIRED" && (
-                            <span className="badge badge-warning">Borderline</span>
-                          )}
-                          {pt.status === "INELIGIBLE" && (
-                            <span className="badge badge-danger">Rejected</span>
-                          )}
+                          {pt.status === "ELIGIBLE" && <span className="badge badge-success">Eligible</span>}
+                          {pt.status === "REVIEW_REQUIRED" && <span className="badge badge-warning">Borderline</span>}
+                          {pt.status === "INELIGIBLE" && <span className="badge badge-danger">Ineligible</span>}
                         </td>
                         <td>
                           <div className="w-24">
-                            <span className="font-mono text-xs font-medium text-[#0F172A] block mb-1">
-                              {confPct}%
-                            </span>
-                            <div className="h-1.5 w-full bg-[#E2E8F0] rounded-[2px] overflow-hidden">
-                              <div
-                                style={{ width: `${confPct}%` }}
-                                className={`h-full ${barColor}`}
-                              />
+                            <span className="font-mono text-[12px] block mb-1">{confPct}%</span>
+                            <div className="h-1.5 w-full bg-[#d5d9e0] overflow-hidden">
+                              <div style={{ width: `${confPct}%` }} className={`h-full ${barColor}`} />
                             </div>
                           </div>
                         </td>
-                        <td className="font-mono text-xs">{pt.criteria_passed}</td>
-                        <td className="font-mono text-xs text-[#D97706] font-medium">
-                          {pt.borderline_count}
-                        </td>
-                        <td className="font-mono text-[11px] text-[#64748B]">
-                          {new Date(pt.reviewed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <td className="font-mono text-[12px]">{pt.criteria_passed}</td>
+                        <td className="font-mono text-[12px]">{pt.borderline_count}</td>
+                        <td className="font-mono text-[11px] text-[#4d5663]">
+                          {new Date(pt.reviewed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </td>
                       </tr>
                     );
@@ -291,221 +263,136 @@ export default function PatientsPage() {
           </div>
         </div>
 
-        {/* ── SCREEN PATIENT MODAL DIALOG ───────────────────────── */}
         {showScreenModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white/95 backdrop-blur-xl border border-white/80 rounded-[8px] max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto ring-1 ring-slate-900/5">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a2332]/40">
+            <div className="bg-white border border-[#d5d9e0] max-w-xl w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-start justify-between pb-3 border-b border-[#d5d9e0]">
                 <div>
-                  <h2 className="text-base font-bold text-[#0F172A] tracking-tight">Screen Patient Record</h2>
-                  <p className="text-xs text-[#64748B] mt-0.5">
-                    Evaluate clinical record through autonomous 6-agent criteria matcher.
+                  <h2 className="font-serif text-[18px]">Screen patient record</h2>
+                  <p className="text-[12px] text-[#4d5663] mt-0.5">
+                    Run the record against the selected protocol criteria.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowScreenModal(false)}
-                  className="text-[#64748B] hover:text-[#0F172A] p-1 rounded"
+                  className="text-[#4d5663] hover:text-[#1a2332] p-1"
+                  aria-label="Close"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Quick sample loader buttons */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-[11px] text-[#64748B] font-medium">Load Preset:</span>
-                <button
-                  type="button"
-                  onClick={loadSampleEligible}
-                  className="px-2 py-0.5 bg-[#F1F5F9] border border-[#CBD5E1] text-[11px] font-medium rounded hover:bg-[#E2E8F0] text-[#0F172A]"
-                >
-                  Clear Eligible (54y, DM2)
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-[#4d5663] font-semibold">Load sample:</span>
+                <button type="button" onClick={loadSampleEligible} className="btn btn-secondary text-[11px] min-h-7 py-1">
+                  Eligible (54y, DM2)
                 </button>
-                <button
-                  type="button"
-                  onClick={loadSampleBorderline}
-                  className="px-2 py-0.5 bg-[#FEF3C7] border border-[#FDE68A] text-[11px] font-medium rounded hover:bg-[#FDE68A] text-[#92400E]"
-                >
-                  Borderline / Disagreement (67y, eGFR 46)
+                <button type="button" onClick={loadSampleBorderline} className="btn btn-secondary text-[11px] min-h-7 py-1">
+                  Borderline (67y, eGFR 46)
                 </button>
               </div>
 
               {screenError && (
-                <div className="p-3 bg-[#FEE2E2] border border-[#FECACA] rounded-[4px] text-xs text-[#DC2626]">
+                <div className="p-3 border border-[#f4c7c3] bg-[#fdecea] text-[12px] text-[#b42318]" role="alert">
                   {screenError}
                 </div>
               )}
 
-              {/* Evaluation Outcome Banner */}
               {screenResult && (
                 <div
-                  className={`p-4 rounded-[4px] border ${
+                  className={`p-4 border ${
                     screenResult.status === "ELIGIBLE"
-                      ? "bg-[#DCFCE7] border-[#86EFAC] text-[#166534]"
+                      ? "bg-[#e6f4ea] border-[#b7e0c2] text-[#0f5c2e]"
                       : screenResult.status === "REVIEW_REQUIRED"
-                      ? "bg-[#FEF3C7] border-[#FDE68A] text-[#92400E]"
-                      : "bg-[#FEE2E2] border-[#FECACA] text-[#991B1B]"
+                      ? "bg-[#fff4d6] border-[#f0d78c] text-[#7a5200]"
+                      : "bg-[#fdecea] border-[#f4c7c3] text-[#8a1c14]"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {screenResult.status === "ELIGIBLE" && <CheckCircle2 className="w-5 h-5 text-[#16A34A]" />}
-                      {screenResult.status === "REVIEW_REQUIRED" && <AlertTriangle className="w-5 h-5 text-[#D97706]" />}
-                      {screenResult.status === "INELIGIBLE" && <XCircle className="w-5 h-5 text-[#DC2626]" />}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-2">
+                      {screenResult.status === "ELIGIBLE" && <CheckCircle2 className="w-5 h-5 shrink-0" />}
+                      {screenResult.status === "REVIEW_REQUIRED" && <AlertTriangle className="w-5 h-5 shrink-0" />}
+                      {screenResult.status === "INELIGIBLE" && <XCircle className="w-5 h-5 shrink-0" />}
                       <div>
-                        <p className="text-xs font-bold tracking-tight">
-                          Screening Result: {screenResult.status} ({(screenResult.confidence * 100).toFixed(0)}% Confidence)
+                        <p className="text-[13px] font-semibold">
+                          {screenResult.status} ({(screenResult.confidence * 100).toFixed(0)}% confidence)
                         </p>
-                        <p className="text-[11px] mt-0.5">
-                          {screenResult.status === "ELIGIBLE" && "Patient matches all primary inclusion criteria. Outreach draft generated."}
-                          {screenResult.status === "REVIEW_REQUIRED" && "Three-round agent disagreement reached. Case queued for clinical coordinator review."}
-                          {screenResult.status === "INELIGIBLE" && "Hard protocol exclusion criterion triggered."}
+                        <p className="text-[12px] mt-0.5">
+                          {screenResult.status === "ELIGIBLE" && "Matches primary inclusion criteria. Outreach draft prepared."}
+                          {screenResult.status === "REVIEW_REQUIRED" && "Borderline result. Queued for coordinator review."}
+                          {screenResult.status === "INELIGIBLE" && "Hard exclusion criterion triggered."}
                         </p>
                       </div>
                     </div>
                     {screenResult.status === "REVIEW_REQUIRED" && (
-                      <Link
-                        href="/review"
-                        className="px-2.5 py-1 bg-white text-[#92400E] border border-[#FDE68A] rounded-[4px] text-xs font-semibold hover:bg-[#FFFBEB]"
-                      >
-                        Go to Review Queue →
-                      </Link>
+                      <Link href="/review" className="btn btn-secondary text-[12px] min-h-8 py-1">Review queue</Link>
                     )}
                     {screenResult.status === "ELIGIBLE" && (
-                      <Link
-                        href="/outreach"
-                        className="px-2.5 py-1 bg-white text-[#166534] border border-[#86EFAC] rounded-[4px] text-xs font-semibold hover:bg-[#F0FDF4]"
-                      >
-                        View Outreach Draft →
-                      </Link>
+                      <Link href="/outreach" className="btn btn-secondary text-[12px] min-h-8 py-1">Outreach drafts</Link>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Screening Form */}
               <form onSubmit={handleScreenSubmit} className="space-y-3.5">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">Target Trial Protocol</label>
-                    <select
-                      value={screenTrialId}
-                      onChange={(e) => setScreenTrialId(e.target.value)}
-                    >
+                    <label className="block text-[12px] font-semibold mb-1.5">Trial protocol</label>
+                    <select value={screenTrialId} onChange={(e) => setScreenTrialId(e.target.value)}>
                       {trials.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.id} — {t.medicine}
-                        </option>
+                        <option key={t.id} value={t.id}>{t.id}: {t.medicine}</option>
                       ))}
                       {!trials.some((t) => t.id === "NCT00005143") && (
-                        <option value="NCT00005143">NCT00005143 — Metformin Trial</option>
+                        <option value="NCT00005143">NCT00005143: Metformin Trial</option>
                       )}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">Patient Subject ID</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="PT-10024"
-                      value={screenSubjectId}
-                      onChange={(e) => setScreenSubjectId(e.target.value)}
-                    />
+                    <label className="block text-[12px] font-semibold mb-1.5">Subject ID</label>
+                    <input type="text" required value={screenSubjectId} onChange={(e) => setScreenSubjectId(e.target.value)} />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">Age (Years)</label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      max={120}
-                      value={screenAge}
-                      onChange={(e) => setScreenAge(parseInt(e.target.value) || 0)}
-                    />
+                    <label className="block text-[12px] font-semibold mb-1.5">Age</label>
+                    <input type="number" required min={1} max={120} value={screenAge} onChange={(e) => setScreenAge(parseInt(e.target.value) || 0)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">Gender</label>
-                    <select
-                      value={screenGender}
-                      onChange={(e) => setScreenGender(e.target.value)}
-                    >
+                    <label className="block text-[12px] font-semibold mb-1.5">Gender</label>
+                    <select value={screenGender} onChange={(e) => setScreenGender(e.target.value)}>
                       <option value="M">Male (M)</option>
                       <option value="F">Female (F)</option>
                       <option value="Other">Other</option>
                     </select>
                   </div>
                 </div>
-
                 <div>
-                  <label className="block text-xs font-medium text-[#0F172A] mb-1">
-                    ICD-9 Diagnoses (Comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="250.00, 401.9"
-                    value={screenDiagnoses}
-                    onChange={(e) => setScreenDiagnoses(e.target.value)}
-                  />
+                  <label className="block text-[12px] font-semibold mb-1.5">ICD-9 diagnoses (comma-separated)</label>
+                  <input type="text" required value={screenDiagnoses} onChange={(e) => setScreenDiagnoses(e.target.value)} />
                 </div>
-
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">HbA1c (%)</label>
-                    <input
-                      type="text"
-                      placeholder="8.2"
-                      value={screenHbA1c}
-                      onChange={(e) => setScreenHbA1c(e.target.value)}
-                    />
+                    <label className="block text-[12px] font-semibold mb-1.5">HbA1c (%)</label>
+                    <input type="text" value={screenHbA1c} onChange={(e) => setScreenHbA1c(e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">eGFR (mL/min)</label>
-                    <input
-                      type="text"
-                      placeholder="74.0"
-                      value={screenEgfr}
-                      onChange={(e) => setScreenEgfr(e.target.value)}
-                    />
+                    <label className="block text-[12px] font-semibold mb-1.5">eGFR</label>
+                    <input type="text" value={screenEgfr} onChange={(e) => setScreenEgfr(e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#0F172A] mb-1">Creatinine (mg/dL)</label>
-                    <input
-                      type="text"
-                      placeholder="1.1"
-                      value={screenCreatinine}
-                      onChange={(e) => setScreenCreatinine(e.target.value)}
-                    />
+                    <label className="block text-[12px] font-semibold mb-1.5">Creatinine</label>
+                    <input type="text" value={screenCreatinine} onChange={(e) => setScreenCreatinine(e.target.value)} />
                   </div>
                 </div>
-
                 <div>
-                  <label className="block text-xs font-medium text-[#0F172A] mb-1">Current Medications</label>
-                  <input
-                    type="text"
-                    placeholder="Lisinopril 10mg, Metformin 500mg"
-                    value={screenMeds}
-                    onChange={(e) => setScreenMeds(e.target.value)}
-                  />
+                  <label className="block text-[12px] font-semibold mb-1.5">Medications</label>
+                  <input type="text" value={screenMeds} onChange={(e) => setScreenMeds(e.target.value)} />
                 </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#E2E8F0]">
-                  <button
-                    type="button"
-                    onClick={() => setShowScreenModal(false)}
-                    className="btn btn-secondary text-xs"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={screeningLoading}
-                    className="btn btn-primary text-xs"
-                  >
-                    {screeningLoading ? "Running Agents..." : "Run Multi-Agent Evaluation"}
+                <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#d5d9e0]">
+                  <button type="button" onClick={() => setShowScreenModal(false)} className="btn btn-secondary">Close</button>
+                  <button type="submit" disabled={screeningLoading} className="btn btn-primary">
+                    {screeningLoading ? "Evaluating..." : "Run screening"}
                   </button>
                 </div>
               </form>

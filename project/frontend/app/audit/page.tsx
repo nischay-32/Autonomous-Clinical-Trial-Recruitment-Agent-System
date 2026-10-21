@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import AppShell from "@/components/AppShell";
 import { api, AuditEntry } from "@/lib/api";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
-
-
 
 export default function AuditTrailPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -19,18 +17,7 @@ export default function AuditTrailPage() {
     async function loadAudit() {
       try {
         const data = await api.audit("", 100);
-        // Enrich with sample audit entries if empty
-        if (data.length === 0) {
-          setEntries([
-            { id: "AUD-101", timestamp: "2026-10-11T21:40:00Z", agent_name: "CriteriaMatcher", action: "EVALUATE_CRITERIA_COMPLETED", patient_id: "PT-42991", trial_id: "NCT00262600", hipaa_flag: true, details: { eligible: false, confidence: 0.91, exclusion: "Recent hemorrhage" } },
-            { id: "AUD-102", timestamp: "2026-10-11T21:00:00Z", agent_name: "OutreachAgent", action: "GENERATE_DRAFT_EN", patient_id: "PT-31044", trial_id: "NCT00262600", hipaa_flag: false, details: { language: "en", word_count: 142 } },
-            { id: "AUD-103", timestamp: "2026-10-11T20:15:00Z", agent_name: "Coordinator", action: "ADJUDICATE_INCLUDE", patient_id: "PT-20815", trial_id: "NCT00005143", hipaa_flag: true, details: { justification: "Stable renal clearance over 6-month trajectory.", signed_by: "Dr. C. Roberts" } },
-            { id: "AUD-104", timestamp: "2026-10-11T19:30:00Z", agent_name: "ComplianceAgent", action: "AUDIT_SAFETY_CHECK", patient_id: "PT-10492", trial_id: "NCT00005143", hipaa_flag: true, details: { safety_score: 0.98, deidentified: true } },
-            { id: "AUD-105", timestamp: "2026-10-11T19:28:00Z", agent_name: "RecordReader", action: "NORMALIZE_EHR_RECORD", patient_id: "PT-10492", trial_id: "NCT00005143", hipaa_flag: true, details: { mimic_tables_read: ["PATIENTS", "LABEVENTS", "DIAGNOSES_ICD"] } },
-          ]);
-        } else {
-          setEntries(data);
-        }
+        setEntries(data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -68,28 +55,23 @@ export default function AuditTrailPage() {
   return (
     <AppShell pageTitle="Audit Trail">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-[24px] font-bold text-[#0F172A] tracking-tight">Audit trail</h1>
-          <p className="text-sm text-[#64748B] mt-0.5">
-            Immutable log of all agent decisions, coordinator actions, and data access events. This log cannot be edited or deleted.
-          </p>
-        </div>
+        <p className="text-[13px] text-[#4d5663]">
+          Append-only log of screening decisions, approvals, and data access events.
+        </p>
 
-        {/* Filter row: All on one line */}
-        <div className="bg-white border border-[#E2E8F0] p-4 rounded-[4px] flex flex-wrap items-center justify-between gap-4">
+        <div className="card flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4 flex-1">
             <input
               type="text"
               placeholder="Filter by patient ID"
               value={patientFilter}
               onChange={(e) => setPatientFilter(e.target.value)}
-              className="max-w-[180px] font-mono text-xs py-1.5"
+              className="max-w-[180px] font-mono text-[12px]"
             />
-
             <select
               value={agentFilter}
               onChange={(e) => setAgentFilter(e.target.value)}
-              className="w-44 text-xs py-1.5"
+              className="w-44 text-[12px]"
             >
               <option value="All">All agents</option>
               <option value="Orchestrator">Orchestrator</option>
@@ -99,30 +81,23 @@ export default function AuditTrailPage() {
               <option value="OutreachAgent">Outreach</option>
               <option value="Coordinator">Coordinator</option>
             </select>
-
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-[#0F172A]">
+            <label className="flex items-center gap-2 text-[12px]">
               <input
                 type="checkbox"
                 checked={hipaaOnly}
                 onChange={(e) => setHipaaOnly(e.target.checked)}
-                className="w-4 h-4 rounded-[4px] text-[#2563EB] focus:ring-[#2563EB]"
+                className="w-4 h-4"
               />
-              Show HIPAA events only
+              HIPAA events only
             </label>
           </div>
-
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="btn btn-secondary text-xs flex items-center gap-1.5"
-          >
+          <button type="button" onClick={handleExportCSV} className="btn btn-secondary text-[12px]">
             <Download className="w-3.5 h-3.5" />
-            Export as PDF / CSV
+            Export CSV
           </button>
         </div>
 
-        {/* Table */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[4px] overflow-hidden">
+        <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table>
               <thead>
@@ -145,47 +120,42 @@ export default function AuditTrailPage() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-xs text-[#64748B]">
-                      No audit events matching current parameters.
+                    <td colSpan={7} className="py-12 text-center text-[13px] text-[#4d5663]">
+                      No audit events match the current filters.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((e) => (
-                    <>
-                      <tr key={e.id}>
-                        <td className="font-mono text-xs text-[#64748B]">
-                          {e.timestamp ? new Date(e.timestamp).toISOString().replace("T", " ").slice(0, 19) : "2026-10-11 21:00:00"}
+                    <Fragment key={e.id}>
+                      <tr>
+                        <td className="font-mono text-[12px] text-[#4d5663]">
+                          {e.timestamp
+                            ? new Date(e.timestamp).toISOString().replace("T", " ").slice(0, 19)
+                            : "-"}
                         </td>
                         <td>
                           {e.agent_name === "Coordinator" ? (
-                            <span className="badge bg-[#0F172A] text-white text-[10px]">
-                              Coordinator
-                            </span>
+                            <span className="badge badge-muted">{e.agent_name}</span>
                           ) : (
-                            <span className="badge badge-muted text-[10px]">
-                              {e.agent_name}
-                            </span>
+                            <span className="badge badge-muted">{e.agent_name}</span>
                           )}
                         </td>
-                        <td className="font-mono text-xs font-medium text-[#0F172A]">
-                          {e.patient_id}
-                        </td>
-                        <td className="font-mono text-xs text-[#64748B]">{e.trial_id}</td>
-                        <td className="text-xs font-medium text-[#0F172A]">{e.action}</td>
-                        <td className="text-center">
+                        <td className="font-mono text-[12px] font-semibold">{e.patient_id}</td>
+                        <td className="font-mono text-[12px] text-[#4d5663]">{e.trial_id}</td>
+                        <td className="text-[12px] font-medium">{e.action}</td>
+                        <td className="text-center text-[12px] font-semibold">
                           {e.hipaa_flag ? (
-                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#DC2626]" title="HIPAA Audited" />
+                            <span className="text-[#b42318]">Yes</span>
                           ) : (
-                            <span className="text-xs text-[#CBD5E1]">—</span>
+                            <span className="text-[#4d5663]">No</span>
                           )}
                         </td>
                         <td>
                           <button
                             type="button"
-                            onClick={() =>
-                              setExpandedId(expandedId === e.id ? null : e.id)
-                            }
-                            className="text-[#64748B] hover:text-[#0F172A] p-1"
+                            onClick={() => setExpandedId(expandedId === e.id ? null : e.id)}
+                            className="text-[#4d5663] hover:text-[#1a2332] p-1"
+                            aria-label="Toggle details"
                           >
                             {expandedId === e.id ? (
                               <ChevronDown className="w-4 h-4" />
@@ -196,28 +166,22 @@ export default function AuditTrailPage() {
                         </td>
                       </tr>
                       {expandedId === e.id && (
-                        <tr key={`${e.id}-details`} className="bg-[#F8FAFC]">
-                          <td colSpan={7} className="p-4 border-b border-[#E2E8F0]">
-                            <pre className="font-mono text-[12px] bg-[#F1F5F9] p-3 rounded-[4px] overflow-x-auto text-[#0F172A]">
+                        <tr>
+                          <td colSpan={7} className="p-4 bg-[#f4f5f7] border-b border-[#d5d9e0]">
+                            <pre className="font-mono text-[12px] bg-white border border-[#d5d9e0] p-3 overflow-x-auto">
                               {JSON.stringify(e.details || {}, null, 2)}
                             </pre>
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-
-          {/* Footer count */}
-          <div className="p-4 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
-            <span>Showing 1-{filtered.length} of {entries.length} entries</span>
-            <div className="flex gap-2">
-              <button disabled className="btn btn-secondary text-xs py-1 px-3">Previous</button>
-              <button disabled className="btn btn-secondary text-xs py-1 px-3">Next</button>
-            </div>
+          <div className="p-4 border-t border-[#d5d9e0] text-[12px] text-[#4d5663]">
+            Showing {filtered.length} of {entries.length} entries
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
       <div className="space-y-6">
         <Link
           href="/patients"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#64748B] hover:text-[#0F172A]"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#4d5663] hover:text-[#1a2332]"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to patients
@@ -48,39 +48,39 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
           </div>
         ) : !patient ? (
           <div className="card text-center py-12">
-            <p className="text-sm text-[#64748B]">Patient record not found.</p>
+            <p className="text-sm text-[#4d5663]">Patient record not found.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* ── LEFT COLUMN (Sticky Sidebar 1 col) ──────────────── */}
             <div className="space-y-5 lg:sticky lg:top-20">
               {/* Patient Summary Card */}
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-[4px] space-y-4">
+              <div className="bg-white border border-[#d5d9e0] p-5 rounded-[4px] space-y-4">
                 <div>
-                  <p className="text-xs font-medium text-[#64748B]">MIMIC De-Identified Subject</p>
-                  <p className="font-mono text-[20px] font-bold text-[#0F172A] mt-0.5">
+                  <p className="text-xs font-medium text-[#4d5663]">MIMIC De-Identified Subject</p>
+                  <p className="font-mono text-[20px] font-bold text-[#1a2332] mt-0.5">
                     {patient.subject_id}
                   </p>
                 </div>
 
-                <div className="border-t border-[#E2E8F0] pt-3 space-y-2 text-xs">
+                <div className="border-t border-[#d5d9e0] pt-3 space-y-2 text-xs">
                   <div className="flex justify-between py-1">
-                    <span className="text-[#64748B]">Age / Gender:</span>
-                    <span className="font-mono font-medium text-[#0F172A]">
+                    <span className="text-[#4d5663]">Age / Gender:</span>
+                    <span className="font-mono font-medium text-[#1a2332]">
                       {patient.age} yrs · {patient.gender === "M" ? "Male" : "Female"}
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#64748B]">Language:</span>
-                    <span className="font-medium text-[#0F172A]">English (EN)</span>
+                    <span className="text-[#4d5663]">Language:</span>
+                    <span className="font-medium text-[#1a2332]">English (EN)</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#64748B]">Target Trial:</span>
-                    <span className="font-mono font-medium text-[#0F172A]">{patient.trial_id}</span>
+                    <span className="text-[#4d5663]">Target Trial:</span>
+                    <span className="font-mono font-medium text-[#1a2332]">{patient.trial_id}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#64748B]">Screened Date:</span>
-                    <span className="font-mono text-[#0F172A]">
+                    <span className="text-[#4d5663]">Screened Date:</span>
+                    <span className="font-mono text-[#1a2332]">
                       {new Date(patient.reviewed_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -88,8 +88,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               </div>
 
               {/* Overall Decision Card */}
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-[4px] text-center space-y-4">
-                <p className="text-xs font-medium text-[#64748B]">Autonomous Evaluation</p>
+              <div className="bg-white border border-[#d5d9e0] p-5 rounded-[4px] text-center space-y-4">
+                <p className="text-xs font-medium text-[#4d5663]">Autonomous Evaluation</p>
 
                 <div>
                   {patient.status === "ELIGIBLE" && (
@@ -104,10 +104,10 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 <div>
-                  <p className="font-mono text-[32px] font-bold text-[#0F172A] leading-tight">
+                  <p className="font-mono text-[32px] font-bold text-[#1a2332] leading-tight">
                     {(patient.confidence * 100).toFixed(0)}%
                   </p>
-                  <p className="text-xs text-[#64748B]">Aggregate Matching Confidence</p>
+                  <p className="text-xs text-[#4d5663]">Aggregate Matching Confidence</p>
                 </div>
 
                 <div className="pt-2">
@@ -134,10 +134,10 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
             {/* ── RIGHT COLUMN (Evidence Details 2 col) ───────────── */}
             <div className="lg:col-span-2 space-y-6">
               {/* Section 1: Criteria evaluation */}
-              <div className="bg-white border border-[#E2E8F0] rounded-[4px] overflow-hidden">
-                <div className="p-4 border-b border-[#E2E8F0]">
-                  <h2 className="text-[16px] font-semibold text-[#0F172A]">Criteria evaluation</h2>
-                  <p className="text-xs text-[#64748B] mt-0.5">
+              <div className="bg-white border border-[#d5d9e0] rounded-[4px] overflow-hidden">
+                <div className="p-4 border-b border-[#d5d9e0]">
+                  <h2 className="text-[16px] font-semibold text-[#1a2332]">Criteria evaluation</h2>
+                  <p className="text-xs text-[#4d5663] mt-0.5">
                     Individual protocol criteria evaluated against EHR records (borderline first).
                   </p>
                 </div>
@@ -167,7 +167,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                                 {crit.type}
                               </span>
                             </td>
-                            <td className="text-xs font-medium text-[#0F172A]">{crit.text}</td>
+                            <td className="text-xs font-medium text-[#1a2332]">{crit.text}</td>
                             <td>
                               {crit.status === "PASS" && (
                                 <span className="badge badge-success">PASS</span>
@@ -184,7 +184,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                             </td>
                             <td>
                               <p className="text-xs text-[#334155]">{crit.evidence}</p>
-                              <p className="font-mono text-[11px] text-[#64748B] mt-0.5">
+                              <p className="font-mono text-[11px] text-[#4d5663] mt-0.5">
                                 {crit.source}
                               </p>
                             </td>
@@ -196,13 +196,13 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               </div>
 
               {/* Section 2: Extracted EHR data */}
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-[4px] space-y-4">
-                <h2 className="text-[16px] font-semibold text-[#0F172A]">Extracted EHR data</h2>
+              <div className="bg-white border border-[#d5d9e0] p-5 rounded-[4px] space-y-4">
+                <h2 className="text-[16px] font-semibold text-[#1a2332]">Extracted EHR data</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   {/* Diagnoses */}
-                  <div className="border border-[#E2E8F0] p-3 rounded-[4px] bg-[#F8FAFC]">
-                    <p className="font-medium text-[#0F172A] mb-2">Diagnoses (ICD Codes)</p>
+                  <div className="border border-[#d5d9e0] p-3 rounded-[4px] bg-[#f4f5f7]">
+                    <p className="font-medium text-[#1a2332] mb-2">Diagnoses (ICD Codes)</p>
                     <ul className="space-y-1 font-mono text-[#334155]">
                       {(patient.diagnoses || []).map((d, i) => (
                         <li key={i}>• {d}</li>
@@ -211,13 +211,13 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                   </div>
 
                   {/* Labs */}
-                  <div className="border border-[#E2E8F0] p-3 rounded-[4px] bg-[#F8FAFC]">
-                    <p className="font-medium text-[#0F172A] mb-2">Verified Lab Events</p>
+                  <div className="border border-[#d5d9e0] p-3 rounded-[4px] bg-[#f4f5f7]">
+                    <p className="font-medium text-[#1a2332] mb-2">Verified Lab Events</p>
                     <div className="space-y-1 font-mono text-[#334155]">
                       {Object.entries(patient.labs || {}).map(([name, val]) => (
                         <div key={name} className="flex justify-between">
                           <span>{name}:</span>
-                          <span className="font-medium text-[#0F172A]">{val}</span>
+                          <span className="font-medium text-[#1a2332]">{val}</span>
                         </div>
                       ))}
                     </div>
@@ -226,8 +226,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
                 {/* Medications */}
                 {patient.medications && patient.medications.length > 0 && (
-                  <div className="border border-[#E2E8F0] p-3 rounded-[4px] bg-[#F8FAFC] text-xs">
-                    <p className="font-medium text-[#0F172A] mb-1.5">Active Medications</p>
+                  <div className="border border-[#d5d9e0] p-3 rounded-[4px] bg-[#f4f5f7] text-xs">
+                    <p className="font-medium text-[#1a2332] mb-1.5">Active Medications</p>
                     <p className="text-[#334155] font-mono">
                       {patient.medications.join(", ")}
                     </p>
@@ -237,22 +237,22 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
               {/* Section 3: Disagreement sessions (if borderline) */}
               {patient.disagreement && (
-                <div className="bg-white border border-[#E2E8F0] p-5 rounded-[4px] space-y-4">
+                <div className="bg-white border border-[#d5d9e0] p-5 rounded-[4px] space-y-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-[#D97706]" />
-                    <h2 className="text-[16px] font-semibold text-[#0F172A]">
+                    <h2 className="text-[16px] font-semibold text-[#1a2332]">
                       Disagreement Sessions & Negotiation Loop
                     </h2>
                   </div>
 
-                  <p className="text-xs text-[#64748B]">
+                  <p className="text-xs text-[#4d5663]">
                     Disputed Criterion:{" "}
-                    <span className="font-medium text-[#0F172A]">
+                    <span className="font-medium text-[#1a2332]">
                       {patient.disagreement.criterion}
                     </span>
                   </p>
 
-                  <div className="space-y-2 border-t border-[#E2E8F0] pt-3">
+                  <div className="space-y-2 border-t border-[#d5d9e0] pt-3">
                     {patient.disagreement.rounds.map((r) => (
                       <div
                         key={r.round}

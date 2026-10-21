@@ -6,8 +6,6 @@ import AppShell from "@/components/AppShell";
 import { api, ReviewQueueItem } from "@/lib/api";
 import { Check } from "lucide-react";
 
-
-
 export interface AdjudicatedItem extends ReviewQueueItem {
   decision: "INCLUDE" | "EXCLUDE";
   justification: string;
@@ -20,14 +18,33 @@ export default function ReviewQueuePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "resolved">("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [exitingId, setExitingId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadQueue() {
       try {
-        const data = await api.reviewQueue();
+        const [data, resolved] = await Promise.all([
+          api.reviewQueue(),
+          api.resolvedReviews().catch(() => []),
+        ]);
         setQueue(data);
+        setAdjudicated(
+          resolved.map((r: { session_id: string; patient_id: string; trial_id: string; trial_title: string; medicine: string; decision: string; justification: string; adjudicated_at: string; age?: number; gender?: string; disputed_criterion?: string; confidence?: number; time_in_queue?: string; }) => ({
+            session_id: r.session_id,
+            patient_id: r.patient_id,
+            trial_id: r.trial_id,
+            trial_title: r.trial_title,
+            medicine: r.medicine,
+            age: r.age ?? 0,
+            gender: r.gender ?? "",
+            disputed_criterion: r.disputed_criterion ?? "Resolved",
+            confidence: r.confidence ?? 0,
+            time_in_queue: r.time_in_queue ?? "resolved",
+            decision: r.decision as "INCLUDE" | "EXCLUDE",
+            justification: r.justification,
+            adjudicated_at: new Date(r.adjudicated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          }))
+        );
       } catch (err) {
         console.error(err);
       } finally {
@@ -42,7 +59,6 @@ export default function ReviewQueuePage() {
     decision: "INCLUDE" | "EXCLUDE"
   ) => {
     setProcessingId(item.session_id);
-    setExitingId(item.session_id);
 
     const justification =
       decision === "INCLUDE"
@@ -50,13 +66,7 @@ export default function ReviewQueuePage() {
         : "Coordinator excluded based on strict safety threshold violation.";
 
     try {
-      // Fire API call and visual transition in parallel
-      const [res] = await Promise.all([
-        api.adjudicateReview(item.session_id, decision, justification).catch(() => null),
-        new Promise((r) => setTimeout(r, 260)),
-      ]);
-
-      // Move item from queue to adjudicated list
+      await api.adjudicateReview(item.session_id, decision, justification);
       setQueue((prev) => prev.filter((q) => q.session_id !== item.session_id));
       setAdjudicated((prev) => [
         {
@@ -67,171 +77,113 @@ export default function ReviewQueuePage() {
         },
         ...prev,
       ]);
-
-      const msg =
+      setNotification(
         decision === "INCLUDE"
-          ? `${item.patient_id} approved: Moved to Eligible cohort & draft outreach generated.`
-          : `${item.patient_id} excluded: Status updated to Ineligible.`;
-      setNotification(msg);
+          ? `${item.patient_id} included. Outreach draft generated.`
+          : `${item.patient_id} excluded.`
+      );
       setTimeout(() => setNotification(null), 4000);
     } catch (err) {
       console.error(err);
-      setQueue((prev) => prev.filter((q) => q.session_id !== item.session_id));
     } finally {
       setProcessingId(null);
-      setExitingId(null);
     }
   };
 
   return (
     <AppShell pageTitle="Review Queue">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-[24px] font-bold text-[#0F172A] tracking-tight">Review queue</h1>
-          <p className="text-sm text-[#64748B] mt-1">
-            Clinical cases flagged as borderline after multi-agent consensus disagreement. Each case requires coordinator decision.
-          </p>
-        </div>
+        <p className="text-[13px] text-[#4d5663]">
+          Borderline cases that need a coordinator decision before outreach.
+        </p>
 
         {notification && (
-          <div className="p-3 bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] rounded-[4px] text-xs flex items-center justify-between animate-in fade-in duration-200">
+          <div className="p-3 border border-[#b7e0c2] bg-[#e6f4ea] text-[#0f5c2e] text-[12px] flex items-center justify-between">
             <span>{notification}</span>
-            <button
-              onClick={() => setNotification(null)}
-              className="text-[#047857] hover:text-[#065F46] font-bold text-sm ml-4"
-            >
-              ×
+            <button type="button" onClick={() => setNotification(null)} className="font-semibold ml-4" aria-label="Dismiss">
+              x
             </button>
           </div>
         )}
 
-        {/* Tab Switcher */}
-        <div className="flex border-b border-[#E2E8F0] gap-6 text-xs font-medium">
+        <div className="flex border-b border-[#d5d9e0] gap-6 text-[13px] font-semibold">
           <button
             type="button"
             onClick={() => setActiveTab("pending")}
-            className={`pb-2.5 transition-colors relative flex items-center gap-1.5 ${
-              activeTab === "pending"
-                ? "text-[#2563EB] font-semibold"
-                : "text-[#64748B] hover:text-[#0F172A]"
-            }`}
+            className={`pb-2.5 relative ${activeTab === "pending" ? "text-[#0b5f5a]" : "text-[#4d5663] hover:text-[#1a2332]"}`}
           >
-            <span>Pending Adjudication</span>
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                queue.length > 0
-                  ? "bg-[#FEF3C7] text-[#92400E]"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {queue.length}
-            </span>
-            {activeTab === "pending" && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#2563EB]" />
-            )}
+            Pending ({queue.length})
+            {activeTab === "pending" && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0b5f5a]" />}
           </button>
-
           <button
             type="button"
             onClick={() => setActiveTab("resolved")}
-            className={`pb-2.5 transition-colors relative flex items-center gap-1.5 ${
-              activeTab === "resolved"
-                ? "text-[#2563EB] font-semibold"
-                : "text-[#64748B] hover:text-[#0F172A]"
-            }`}
+            className={`pb-2.5 relative ${activeTab === "resolved" ? "text-[#0b5f5a]" : "text-[#4d5663] hover:text-[#1a2332]"}`}
           >
-            <span>Resolved Cases</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
-              {adjudicated.length}
-            </span>
-            {activeTab === "resolved" && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#2563EB]" />
-            )}
+            Resolved ({adjudicated.length})
+            {activeTab === "resolved" && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0b5f5a]" />}
           </button>
         </div>
 
         {activeTab === "pending" ? (
           loading ? (
             <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
+              {[0, 1, 2].map((i) => (
                 <div key={i} className="h-20 skeleton" />
               ))}
             </div>
           ) : queue.length === 0 ? (
-            <div className="bg-white border border-[#E2E8F0] rounded-[4px] p-12 text-center">
-              <div className="w-10 h-10 rounded-full bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center mx-auto mb-3">
-                <Check className="w-5 h-5" />
-              </div>
-              <h2 className="text-sm font-semibold text-[#0F172A]">No cases pending review</h2>
-              <p className="text-xs text-[#64748B] mt-1">
-                The agents resolved all borderline decisions across active trial cohorts.
-              </p>
+            <div className="card p-12 text-center">
+              <Check className="w-6 h-6 mx-auto mb-3 text-[#0b5f5a]" />
+              <h2 className="font-serif text-[16px]">No cases pending review</h2>
+              <p className="text-[12px] text-[#4d5663] mt-1.5">The queue is empty for active trials.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {queue.map((item) => (
                 <div
                   key={item.session_id}
-                  className={`bg-white border border-[#E2E8F0] p-4 rounded-[4px] flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 ${
-                    exitingId === item.session_id
-                      ? "item-exit-animating"
-                      : "spring-card hover:border-slate-300"
-                  }`}
+                  className="card flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
-                  {/* Left */}
                   <div className="min-w-[200px]">
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/patients/${item.patient_id}`}
-                        className="font-mono text-base font-bold text-[#0F172A] hover:text-[#2563EB]"
+                        className="font-mono text-[15px] font-semibold hover:text-[#0b5f5a]"
                       >
                         {item.patient_id}
                       </Link>
-                      <span className="badge badge-amber text-[10px]">Borderline</span>
+                      <span className="badge badge-warning">Borderline</span>
                     </div>
-                    <p className="text-xs text-[#64748B] mt-0.5">
-                      {item.trial_title} · <span className="font-medium text-[#0F172A]">{item.medicine}</span>
+                    <p className="text-[12px] text-[#4d5663] mt-0.5">
+                      {item.trial_title} · {item.medicine}
                     </p>
                   </div>
-
-                  {/* Center */}
                   <div className="flex-1 min-w-[240px]">
-                    <p className="text-xs text-[#64748B]">Disagreed on:</p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5 line-clamp-2">
-                      &ldquo;{item.disputed_criterion}&rdquo;
-                    </p>
+                    <p className="text-[12px] text-[#4d5663]">Disputed criterion</p>
+                    <p className="text-[12px] font-medium mt-0.5 line-clamp-2">&ldquo;{item.disputed_criterion}&rdquo;</p>
                   </div>
-
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-[#64748B] whitespace-nowrap mr-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-[12px] text-[#4d5663] whitespace-nowrap mr-1">
                       {item.time_in_queue}
                     </span>
-
                     <button
                       type="button"
                       disabled={processingId === item.session_id}
                       onClick={() => handleQuickAdjudicate(item, "INCLUDE")}
-                      className="bg-[#16A34A] text-white px-3 py-1.5 rounded-[4px] text-xs font-medium hover:bg-[#15803D] transition-colors disabled:opacity-50"
-                      title="Include patient in trial"
+                      className="btn btn-primary text-[12px] min-h-8 py-1"
                     >
                       Include
                     </button>
-
                     <button
                       type="button"
                       disabled={processingId === item.session_id}
                       onClick={() => handleQuickAdjudicate(item, "EXCLUDE")}
-                      className="bg-white border border-[#DC2626] text-[#DC2626] px-3 py-1.5 rounded-[4px] text-xs font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
-                      title="Exclude patient from trial"
+                      className="btn btn-danger text-[12px] min-h-8 py-1"
                     >
                       Exclude
                     </button>
-
-                    <Link
-                      href={`/review/${item.session_id}`}
-                      className="bg-[#0F172A] text-white px-3 py-1.5 rounded-[4px] text-xs font-medium hover:bg-slate-800 transition-colors whitespace-nowrap"
-                    >
+                    <Link href={`/review/${item.session_id}`} className="btn btn-secondary text-[12px] min-h-8 py-1">
                       Transcript
                     </Link>
                   </div>
@@ -239,47 +191,33 @@ export default function ReviewQueuePage() {
               ))}
             </div>
           )
+        ) : adjudicated.length === 0 ? (
+          <div className="card p-12 text-center text-[13px] text-[#4d5663]">
+            No cases adjudicated in this session yet.
+          </div>
         ) : (
-          /* Resolved Tab */
-          adjudicated.length === 0 ? (
-            <div className="bg-white border border-[#E2E8F0] rounded-[4px] p-12 text-center text-xs text-[#64748B]">
-              No cases have been adjudicated in this session yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {adjudicated.map((item) => (
-                <div
-                  key={item.session_id}
-                  className="bg-white border border-[#E2E8F0] p-4 rounded-[4px] flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="min-w-[200px]">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-base font-bold text-[#0F172A]">
-                        {item.patient_id}
-                      </span>
-                      <span
-                        className={`badge ${
-                          item.decision === "INCLUDE" ? "badge-green" : "badge-red"
-                        }`}
-                      >
-                        {item.decision === "INCLUDE" ? "INCLUDED" : "EXCLUDED"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#64748B] mt-0.5">{item.trial_title}</p>
+          <div className="space-y-3">
+            {adjudicated.map((item) => (
+              <div
+                key={item.session_id}
+                className="card flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="min-w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[15px] font-semibold">{item.patient_id}</span>
+                    <span className={`badge ${item.decision === "INCLUDE" ? "badge-success" : "badge-danger"}`}>
+                      {item.decision === "INCLUDE" ? "Included" : "Excluded"}
+                    </span>
                   </div>
-
-                  <div className="flex-1 text-xs text-[#64748B]">
-                    <span className="font-medium text-[#0F172A]">Justification:</span>{" "}
-                    {item.justification}
-                  </div>
-
-                  <div className="text-xs text-[#64748B] font-mono">
-                    Resolved at {item.adjudicated_at}
-                  </div>
+                  <p className="text-[12px] text-[#4d5663] mt-0.5">{item.trial_title}</p>
                 </div>
-              ))}
-            </div>
-          )
+                <div className="flex-1 text-[12px] text-[#4d5663]">
+                  <span className="font-semibold text-[#1a2332]">Justification:</span> {item.justification}
+                </div>
+                <div className="text-[12px] text-[#4d5663] font-mono">Resolved at {item.adjudicated_at}</div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </AppShell>

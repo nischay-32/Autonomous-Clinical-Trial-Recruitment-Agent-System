@@ -1,20 +1,67 @@
-// Typed API client — all backend calls go through here.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const TOKEN_KEY = "trialscreen_token";
+const USER_KEY = "trialscreen_user";
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function getStoredUser(): AuthUser | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+export function setSession(token: string, user: AuthUser) {
+  sessionStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function clearSession() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (init?.body) headers["Content-Type"] = "application/json";
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { cache: "no-store", ...init, headers });
+  if (!res.ok) {
+    let message = `${init?.method ?? "GET"} ${path} → ${res.status}`;
+    try {
+      const payload = await res.json();
+      if (typeof payload.detail === "string") message = payload.detail;
+    } catch {
+      /* keep fallback */
+    }
+    if (res.status === 401 && !path.startsWith("/auth/login") && !path.startsWith("/auth/register")) {
+      clearSession();
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    throw new Error(message);
+  }
   return res.json();
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
-  return res.json();
+function get<T>(path: string): Promise<T> {
+  return request<T>(path);
+}
+
+function post<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, { method: "POST", body: JSON.stringify(body) });
 }
 
 // ── Types ────────────────────────────────────────────────────────
@@ -28,6 +75,7 @@ export interface Trial {
   patients_screened?: number;
   eligible?: number;
   pending_review?: number;
+  ineligible?: number;
   status?: "Active" | "Paused" | "Complete";
 }
 
@@ -109,39 +157,6 @@ export interface AuditEntry {
   hipaa_flag?: boolean;
 }
 
-export interface ReportData {
-  report_id: string;
-  generated_at: string;
-  trial_id: string;
-  funnel: {
-    screened: number;
-    eligible: number;
-    ineligible: number;
-    review_required: number;
-    outreach_drafted: number;
-    eligibility_rate: number;
-  };
-  shap_summary: Record<string, unknown>[];
-  audit_entries: AuditEntry[];
-  total_audit_events: number;
-}
-
-export interface OrgSettings {
-  org_name: string;
-  irb_number: string;
-  compliance_email: string;
-  data_residency: string;
-  retention_years: number;
-}
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: "Coordinator" | "Viewer" | "Admin";
-  joined: string;
-}
-
 export interface AuthUser {
   id: string;
   email: string;
@@ -179,7 +194,7 @@ export const api = {
     job_title?: string;
     password: string;
   }) => post<AuthResponse>("/auth/register", body),
-  me: (email = "") => get<AuthUser>(`/auth/me${email ? `?email=${email}` : ""}`),
+  me: () => get<AuthUser>("/auth/me"),
 
   trials: () => get<Trial[]>("/trials"),
   trial: (id: string) => get<Trial>(`/trials/${id}`),
@@ -201,6 +216,10 @@ export const api = {
     }),
   
   reviewQueue: () => get<ReviewQueueItem[]>("/review/queue"),
+  resolvedReviews: () => get<{
+    session_id: string; patient_id: string; trial_id: string; trial_title: string;
+    medicine: string; decision: string; justification: string; adjudicated_at: string;
+  }[]>("/review/resolved"),
   adjudicateReview: (session_id: string, decision: "INCLUDE" | "EXCLUDE", justification: string) =>
     post<{ session_id: string; status: string; message: string }>(`/review/${session_id}/adjudicate`, {
       decision,
@@ -215,13 +234,13 @@ export const api = {
       coordinator_name,
       comments,
     }),
+  rejectOutreach: (patient_id: string, coordinator_name: string, reason = "") =>
+    post<{ patient_id: string; status: string; message: string }>("/outreach/reject", {
+      patient_id,
+      coordinator_name,
+      reason,
+    }),
 
   audit: (patient_id = "", limit = 100) =>
     get<AuditEntry[]>(`/audit?patient_id=${patient_id}&limit=${limit}`),
-  report: (trial_id = "") => get<ReportData>(`/report${trial_id ? `?trial_id=${trial_id}` : ""}`),
-  
-  orgSettings: () => get<OrgSettings>("/settings/organization"),
-  updateOrgSettings: (payload: Partial<OrgSettings>) =>
-    post<{ status: string; settings: OrgSettings }>("/settings/organization", payload),
-  teamMembers: () => get<TeamMember[]>("/settings/team"),
 };

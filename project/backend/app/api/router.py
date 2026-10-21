@@ -1,16 +1,18 @@
 """Central API Router for Autonomous Clinical Trial Recruitment System."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from ..agents.orchestrator import run_recruitment_pipeline
 from ..agents.reporting import generate_report
 from ..agents.outreach import SUPPORTED_LANGUAGES
 from ..db.audit import get_audit_trail, log_audit_event
+from ..db.loaders import load_mimic_cohort
 
 import json
 import hashlib
 import secrets
 import uuid
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -69,6 +71,19 @@ def _save_users_db():
         pass
 
 _USERS_DB = _load_users_db()
+_TOKENS: dict[str, str] = {}  # bearer token -> email
+
+
+def resolve_token(authorization: str | None) -> dict | None:
+    if not authorization:
+        return None
+    scheme, _, value = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not value:
+        return None
+    email = _TOKENS.get(value.strip())
+    if not email:
+        return None
+    return _USERS_DB.get(email)
 
 class RegisterRequest(BaseModel):
     full_name: str
@@ -101,6 +116,7 @@ def register_user(req: RegisterRequest):
     _USERS_DB[email_clean] = user_record
     _save_users_db()
     token = f"tk_{uuid.uuid4().hex}"
+    _TOKENS[token] = email_clean
     log_audit_event("AuthService", "USER_REGISTERED", user_id, "", {"email": email_clean, "org": req.organization})
     return {
         "token": token,
@@ -125,6 +141,7 @@ def login_user(req: LoginRequest):
     if calc_hash != user["password_hash"]:
         raise HTTPException(status_code=401, detail="Invalid work email or password.")
     token = f"tk_{uuid.uuid4().hex}"
+    _TOKENS[token] = email_clean
     log_audit_event("AuthService", "USER_LOGIN", user["id"], "", {"email": email_clean})
     return {
         "token": token,
@@ -140,10 +157,10 @@ def login_user(req: LoginRequest):
     }
 
 @api_router.get("/auth/me")
-def get_current_user(email: str = "croberts@memorial-cancer.org"):
-    user = _USERS_DB.get(email.strip().lower())
+def get_current_user(authorization: str | None = Header(default=None)):
+    user = resolve_token(authorization)
     if not user:
-        user = list(_USERS_DB.values())[0]
+        raise HTTPException(status_code=401, detail="Sign in required.")
     return {
         "id": user["id"],
         "email": user["email"],
@@ -152,8 +169,6 @@ def get_current_user(email: str = "croberts@memorial-cancer.org"):
         "organization": user["organization"],
         "job_title": user["job_title"],
     }
-
-RULES_FILE = Path(__file__).resolve().parents[1] / "db" / "trials_criteria_v1.json"
 
 # ── Trial store (in-memory; seed from JSON file if present) ──────────────────
 
@@ -251,17 +266,31 @@ def health_check():
     return {"status": "ok", "service": "Autonomous Clinical Trial Recruitment Agent System"}
 
 
+def _trial_with_counts(trial: dict) -> dict:
+    pts = [p for p in DEFAULT_COHORT if p["trial_id"] == trial["id"]]
+    return {
+        **trial,
+        "patients_screened": len(pts),
+        "eligible": sum(1 for p in pts if p["status"] == "ELIGIBLE"),
+        "pending_review": sum(1 for p in pts if p["status"] == "REVIEW_REQUIRED"),
+        "ineligible": sum(1 for p in pts if p["status"] == "INELIGIBLE"),
+        "status": trial.get("status", "Active"),
+    }
+
+
 @api_router.get("/trials")
 def list_trials():
-    return list(DEMO_TRIALS.values())
+    ensure_seeded()
+    return [_trial_with_counts(t) for t in DEMO_TRIALS.values()]
 
 
 @api_router.get("/trials/{trial_id}")
 def get_trial(trial_id: str):
+    ensure_seeded()
     trial = DEMO_TRIALS.get(trial_id)
     if not trial:
         raise HTTPException(status_code=404, detail=f"Trial {trial_id} not found")
-    return trial
+    return _trial_with_counts(trial)
 
 
 # ── B2B: Custom protocol upload (Phase 6) ─────────────────────────────────────
@@ -302,23 +331,54 @@ def screen_patient(req: ScreenRequest):
     # Automatically add screened patient to DEFAULT_COHORT so they appear in /patients and /dashboard
     sub_id = req.patient.subject_id or f"PT-{secrets.randbelow(89999) + 10000}"
     status = result.get("status", "ELIGIBLE")
-    conf = round(float(result.get("confidence", 0.91)), 2)
+    conf = round(float(result.get("confidence", 0.90)), 2)
+    m = result.get("matcher", {})
+    c = result.get("compliance", {})
+    consensus_data = result.get("consensus", {})
+
+    criteria_evals = []
+    for d in m.get("details", []):
+        criteria_evals.append({
+            "criterion_id": d.get("criterion_id", "CRIT"),
+            "type": d.get("type", "INCLUSION"),
+            "text": d.get("description", ""),
+            "status": "PASS" if d.get("status") == "MET" else ("BORDERLINE" if d.get("status") == "BORDERLINE" else "FAIL"),
+            "confidence": d.get("confidence", 0.85),
+            "evidence": d.get("evidence", ""),
+            "source": "EHR_AUTOMATED_EVAL",
+        })
+    if not criteria_evals:
+        criteria_evals = [
+            {
+                "criterion_id": "CRIT-01",
+                "type": "INCLUSION",
+                "text": f"Patient meets baseline criteria for {trial['medicine']}",
+                "status": "PASS" if status == "ELIGIBLE" else ("BORDERLINE" if status == "REVIEW_REQUIRED" else "FAIL"),
+                "confidence": conf,
+                "evidence": f"Normalized patient profile processed against {trial['id']}.",
+                "source": "EHR_AUTOMATED_EVAL",
+            }
+        ]
 
     disagreement_data = None
     if status == "REVIEW_REQUIRED":
+        disputed_crit = "Lab or clinical safety threshold under review"
+        bline_items = [d for d in m.get("details", []) if d.get("status") == "BORDERLINE"]
+        if bline_items:
+            disputed_crit = bline_items[0].get("description", disputed_crit)
         disagreement_data = {
-            "criterion": "Lab or clinical safety threshold under review",
+            "criterion": disputed_crit,
             "matcher_stance": "INELIGIBLE (Borderline)",
             "matcher_confidence": conf,
             "matcher_reasoning": "Clinical thresholds near protocol boundary.",
-            "compliance_stance": "ELIGIBLE with Warning",
-            "compliance_confidence": 0.72,
-            "compliance_reasoning": "Within acceptable margin with weekly monitoring.",
-            "rounds": [
+            "compliance_stance": "ELIGIBLE with Warning" if c.get("is_compliant") else "NON_COMPLIANT",
+            "compliance_confidence": c.get("safety_score", 0.72),
+            "compliance_reasoning": "Within acceptable margin with weekly monitoring." if c.get("is_compliant") else "Contraindications flagged.",
+            "rounds": consensus_data.get("rounds", [
                 {"round": 1, "matcher": "FLAG", "compliance": "PASS", "result": "Stance divergence"},
                 {"round": 2, "matcher": "BORDERLINE", "compliance": "CONDITIONAL", "result": "Borderline persists"},
                 {"round": 3, "matcher": "ESCALATE", "compliance": "ESCALATE", "result": "Escalated to clinical coordinator"}
-            ]
+            ])
         }
 
     cohort_record = {
@@ -330,28 +390,18 @@ def screen_patient(req: ScreenRequest):
         "medicine": trial["medicine"],
         "status": status,
         "confidence": conf,
-        "criteria_passed": 26 if status == "ELIGIBLE" else (22 if status == "REVIEW_REQUIRED" else 14),
-        "borderline_count": 1 if status == "REVIEW_REQUIRED" else 0,
+        "criteria_passed": m.get("criteria_met", 26 if status == "ELIGIBLE" else (22 if status == "REVIEW_REQUIRED" else 14)),
+        "borderline_count": m.get("criteria_borderline", 1 if status == "REVIEW_REQUIRED" else 0),
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
         "diagnoses": req.patient.diagnoses,
         "labs": req.patient.labs,
         "medications": req.patient.medications,
-        "criteria_evaluations": [
-            {
-                "criterion_id": f"CRIT-01",
-                "type": "INCLUSION",
-                "text": f"Patient meets baseline criteria for {trial['medicine']}",
-                "status": "PASS" if status == "ELIGIBLE" else ("BORDERLINE" if status == "REVIEW_REQUIRED" else "FAIL"),
-                "confidence": conf,
-                "evidence": f"Normalized patient profile processed against {trial['id']}.",
-                "source": "EHR_AUTOMATED_EVAL",
-            }
-        ],
+        "criteria_evaluations": criteria_evals,
         "disagreement": disagreement_data,
     }
 
     # Upsert into DEFAULT_COHORT
-    idx = next((i for i, p in enumerate(DEFAULT_COHORT) if p["subject_id"] == sub_id), None)
+    idx = next((i for i, p in enumerate(DEFAULT_COHORT) if p["subject_id"] == sub_id and p["trial_id"] == req.trial_id), None)
     if idx is not None:
         DEFAULT_COHORT[idx] = cohort_record
     else:
@@ -421,6 +471,37 @@ def approve_outreach(req: ApproveRequest):
     }
 
 
+class RejectRequest(BaseModel):
+    patient_id: str
+    coordinator_name: str
+    reason: str = ""
+
+
+@api_router.post("/outreach/reject")
+def reject_outreach(req: RejectRequest):
+    for d in OUTREACH_DRAFTS:
+        if d["patient_id"] == req.patient_id or d["draft_id"] == req.patient_id:
+            d["status"] = "Rejected"
+            d["rejected_by"] = req.coordinator_name
+            d["rejected_at"] = datetime.now(timezone.utc).isoformat()
+            d["reject_reason"] = req.reason
+            break
+
+    log_audit_event(
+        "Coordinator",
+        "REJECT_OUTREACH",
+        req.patient_id,
+        "",
+        {"coordinator": req.coordinator_name, "reason": req.reason}
+    )
+    return {
+        "patient_id": req.patient_id,
+        "status": "Rejected",
+        "rejected_by": req.coordinator_name,
+        "message": "Outreach draft rejected.",
+    }
+
+
 # ── Reporting (Phase 6) ───────────────────────────────────────────────────────
 
 @api_router.get("/report")
@@ -440,107 +521,152 @@ def get_audit(patient_id: str = "", limit: int = 50):
 
 
 # ── Seed Clinical Cohort (MIMIC-III Synthesized) ─────────────────────────────
-DEFAULT_COHORT = [
-    {
-        "subject_id": "PT-10492",
-        "age": 58,
-        "gender": "M",
-        "trial_id": "NCT00005143",
-        "trial_title": "Metformin Clinical Trial for Diabetes Management",
-        "medicine": "Metformin",
-        "status": "ELIGIBLE",
-        "confidence": 0.94,
-        "criteria_passed": 26,
-        "borderline_count": 1,
-        "reviewed_at": "2026-10-11T19:30:00Z",
-        "diagnoses": ["250.00 (Type 2 Diabetes)", "401.9 (Essential Hypertension)"],
-        "labs": {"HbA1c": 8.2, "eGFR": 74.0, "Serum Creatinine": 1.1, "ALT": 28},
-        "medications": ["Lisinopril 10mg", "Atorvastatin 20mg"],
-        "criteria_evaluations": [
-            {"criterion_id": "MET-INC-01", "type": "INCLUSION", "text": "Age >= 30 AND <= 70 years", "status": "PASS", "confidence": 0.99, "evidence": "Patient age calculated at admission: 58. DOB verified.", "source": "PATIENTS.DOB"},
-            {"criterion_id": "MET-INC-02", "type": "INCLUSION", "text": "Confirmed Type 2 Diabetes Mellitus diagnosis", "status": "PASS", "confidence": 0.98, "evidence": "ICD-9 250.00 present in primary admission records.", "source": "DIAGNOSES_ICD.ICD9_CODE"},
-            {"criterion_id": "MET-INC-03", "type": "INCLUSION", "text": "HbA1c >= 7.0% and <= 10.5%", "status": "PASS", "confidence": 0.95, "evidence": "Recent HbA1c value: 8.2% (Date: 2026-09-14).", "source": "LABEVENTS ITEMID=50852"},
-            {"criterion_id": "MET-EXC-01", "type": "EXCLUSION", "text": "Severe renal impairment (eGFR < 45 mL/min/1.73m2)", "status": "PASS", "confidence": 0.92, "evidence": "Calculated eGFR: 74.0 mL/min/1.73m2 from baseline Serum Creatinine 1.1 mg/dL.", "source": "LABEVENTS ITEMID=50912"},
-            {"criterion_id": "MET-EXC-02", "type": "EXCLUSION", "text": "Active lactic acidosis or acute metabolic acidosis", "status": "PASS", "confidence": 0.94, "evidence": "Arterial blood gas lactate 1.2 mmol/L. Zero acidosis codes.", "source": "LABEVENTS ITEMID=50813"}
-        ]
-    },
-    {
-        "subject_id": "PT-20815",
-        "age": 67,
-        "gender": "F",
-        "trial_id": "NCT00005143",
-        "trial_title": "Metformin Clinical Trial for Diabetes Management",
-        "medicine": "Metformin",
-        "status": "REVIEW_REQUIRED",
-        "confidence": 0.68,
-        "criteria_passed": 24,
-        "borderline_count": 2,
-        "reviewed_at": "2026-10-11T20:15:00Z",
-        "diagnoses": ["250.02 (Type 2 Diabetes Uncontrolled)", "585.3 (Chronic Kidney Disease Stage 3)"],
-        "labs": {"HbA1c": 9.4, "eGFR": 46.2, "Serum Creatinine": 1.48, "ALT": 32},
-        "medications": ["Glipizide 5mg", "Amlodipine 5mg"],
-        "criteria_evaluations": [
-            {"criterion_id": "MET-INC-01", "type": "INCLUSION", "text": "Age >= 30 AND <= 70 years", "status": "PASS", "confidence": 0.99, "evidence": "Patient age: 67 years.", "source": "PATIENTS.DOB"},
-            {"criterion_id": "MET-EXC-01", "type": "EXCLUSION", "text": "Severe renal impairment (eGFR < 45 mL/min/1.73m2)", "status": "BORDERLINE", "confidence": 0.62, "evidence": "Baseline eGFR: 46.2 mL/min/1.73m2. Fluctuates near 45 mL/min threshold across last 3 lab draws (44.8, 47.1, 46.2).", "source": "LABEVENTS ITEMID=50912"}
-        ],
-        "disagreement": {
-            "criterion": "Severe renal impairment (eGFR < 45 mL/min/1.73m2)",
-            "matcher_stance": "INELIGIBLE (Borderline)",
-            "matcher_confidence": 0.62,
-            "matcher_reasoning": "Recent draw at 46.2 is above 45 threshold, but previous draw was 44.8. High risk of drug accumulation under protocol limits.",
-            "compliance_stance": "ELIGIBLE with Warning",
-            "compliance_confidence": 0.74,
-            "compliance_reasoning": "Most recent verified lab value complies with threshold. Safe to proceed subject to bi-weekly renal function monitoring.",
-            "rounds": [
-                {"round": 1, "matcher": "FLAG", "compliance": "PASS", "result": "Stance divergence"},
-                {"round": 2, "matcher": "BORDERLINE (RAG: CKD Stage 3 note found)", "compliance": "CONDITIONAL", "result": "Divergence persists"},
-                {"round": 3, "matcher": "ESCALATE", "compliance": "ESCALATE", "result": "Escalated to clinical coordinator"}
-            ]
-        }
-    },
-    {
-        "subject_id": "PT-31044",
-        "age": 42,
-        "gender": "M",
-        "trial_id": "NCT00262600",
-        "trial_title": "Warfarin Anticoagulation Efficacy Protocol",
-        "medicine": "Warfarin",
-        "status": "ELIGIBLE",
-        "confidence": 0.96,
-        "criteria_passed": 26,
-        "borderline_count": 0,
-        "reviewed_at": "2026-10-11T21:00:00Z",
-        "diagnoses": ["427.31 (Atrial Fibrillation)"],
-        "labs": {"INR": 1.1, "Platelets": 240000, "Hemoglobin": 14.5},
-        "medications": ["Metoprolol 25mg"],
-        "criteria_evaluations": [
-            {"criterion_id": "WAR-INC-01", "type": "INCLUSION", "text": "Documented non-valvular atrial fibrillation", "status": "PASS", "confidence": 0.99, "evidence": "ICD-9 427.31 confirmed by 12-lead ECG note.", "source": "DIAGNOSES_ICD.ICD9_CODE"}
-        ]
-    },
-    {
-        "subject_id": "PT-42991",
-        "age": 73,
-        "gender": "F",
-        "trial_id": "NCT00262600",
-        "trial_title": "Warfarin Anticoagulation Efficacy Protocol",
-        "medicine": "Warfarin",
-        "status": "INELIGIBLE",
-        "confidence": 0.91,
-        "criteria_passed": 18,
-        "borderline_count": 0,
-        "reviewed_at": "2026-10-11T21:40:00Z",
-        "diagnoses": ["427.31 (Atrial Fibrillation)", "459.0 (Hemorrhage unspecified)"],
-        "labs": {"INR": 2.4, "Platelets": 95000, "Hemoglobin": 9.8},
-        "medications": ["Aspirin 81mg"],
-        "criteria_evaluations": [
-            {"criterion_id": "WAR-EXC-01", "type": "EXCLUSION", "text": "Recent major hemorrhage or bleeding diathesis within 6 months", "status": "FAIL", "confidence": 0.98, "evidence": "Severe gastrointestinal bleeding episode documented 4 weeks ago. Hard exclusion.", "source": "DIAGNOSES_ICD.ICD9_CODE"}
-        ]
-    }
-]
+DEFAULT_COHORT: list[dict] = []
+
+
+# ── Seed all MIMIC-III patients on startup ────────────────────────────────────
+_SEED_LOCK = threading.Lock()
+_SEED_DONE = False
+
+def _seed_mimic_patients():
+    """Load all MIMIC-III demo patients, screen each against every trial,
+    and populate DEFAULT_COHORT so all trials and patients show the full dataset."""
+    global _SEED_DONE
+    with _SEED_LOCK:
+        if _SEED_DONE:
+            return
+        _SEED_DONE = True
+
+    try:
+        mimic_profiles = load_mimic_cohort(limit=9999)  # all patients
+    except Exception as e:
+        print(f"[SEED] Could not load MIMIC cohort: {e}")
+        return
+    if not mimic_profiles:
+        return
+
+    existing_pairs = {(p["subject_id"], p["trial_id"]) for p in DEFAULT_COHORT}
+    added = 0
+    for profile in mimic_profiles:
+        sid = f"PT-{profile['subject_id']}"
+        # Screen against each trial so every trial has its screened cohort
+        for trial in DEMO_TRIALS.values():
+            if (sid, trial["id"]) in existing_pairs:
+                continue
+            try:
+                result = run_recruitment_pipeline(profile, trial)
+            except Exception:
+                continue
+            status = result.get("status", "INELIGIBLE")
+            conf = float(result.get("confidence", 0.85))
+            m = result.get("matcher", {})
+            c = result.get("compliance", {})
+            consensus_data = result.get("consensus", {})
+
+            criteria_evals = []
+            for d in m.get("details", []):
+                criteria_evals.append({
+                    "criterion_id": d.get("criterion_id", "CRIT"),
+                    "type": d.get("type", "INCLUSION"),
+                    "text": d.get("description", ""),
+                    "status": "PASS" if d.get("status") == "MET" else ("BORDERLINE" if d.get("status") == "BORDERLINE" else "FAIL"),
+                    "confidence": d.get("confidence", 0.85),
+                    "evidence": d.get("evidence", ""),
+                    "source": "EHR_AUTOMATED_EVAL",
+                })
+            if not criteria_evals:
+                criteria_evals = [
+                    {
+                        "criterion_id": "CRIT-01",
+                        "type": "INCLUSION",
+                        "text": f"Patient meets baseline criteria for {trial['medicine']}",
+                        "status": "PASS" if status == "ELIGIBLE" else ("BORDERLINE" if status == "REVIEW_REQUIRED" else "FAIL"),
+                        "confidence": conf,
+                        "evidence": f"Normalized patient profile processed against {trial['id']}.",
+                        "source": "EHR_AUTOMATED_EVAL",
+                    }
+                ]
+
+            disagreement_data = None
+            if status == "REVIEW_REQUIRED":
+                disputed_crit = "Lab or clinical safety threshold under review"
+                bline_items = [d for d in m.get("details", []) if d.get("status") == "BORDERLINE"]
+                if bline_items:
+                    disputed_crit = bline_items[0].get("description", disputed_crit)
+                disagreement_data = {
+                    "criterion": disputed_crit,
+                    "matcher_stance": "INELIGIBLE (Borderline)",
+                    "matcher_confidence": conf,
+                    "matcher_reasoning": "Clinical thresholds near protocol boundary.",
+                    "compliance_stance": "ELIGIBLE with Warning" if c.get("is_compliant") else "NON_COMPLIANT",
+                    "compliance_confidence": c.get("safety_score", 0.72),
+                    "compliance_reasoning": "Within acceptable margin with weekly monitoring." if c.get("is_compliant") else "Contraindications flagged.",
+                    "rounds": consensus_data.get("rounds", [
+                        {"round": 1, "matcher": "FLAG", "compliance": "PASS", "result": "Stance divergence"},
+                        {"round": 2, "matcher": "BORDERLINE", "compliance": "CONDITIONAL", "result": "Borderline persists"},
+                        {"round": 3, "matcher": "ESCALATE", "compliance": "ESCALATE", "result": "Escalated to clinical coordinator"}
+                    ])
+                }
+
+            record = {
+                "subject_id": sid,
+                "age": profile.get("age", 0),
+                "gender": profile.get("gender", "U"),
+                "trial_id": trial["id"],
+                "trial_title": trial["title"],
+                "medicine": trial["medicine"],
+                "status": status,
+                "confidence": conf,
+                "criteria_passed": m.get("criteria_met", 0),
+                "borderline_count": m.get("criteria_borderline", 0),
+                "reviewed_at": datetime.now(timezone.utc).isoformat(),
+                "diagnoses": profile.get("diagnoses", []),
+                "labs": profile.get("labs", {}),
+                "medications": profile.get("medications", []),
+                "criteria_evaluations": criteria_evals,
+                "disagreement": disagreement_data,
+            }
+            DEFAULT_COHORT.append(record)
+            existing_pairs.add((sid, trial["id"]))
+
+            # Generate outreach draft for eligible patients
+            if status == "ELIGIBLE":
+                draft_id = f"DRF-{profile['subject_id']}-{trial['id']}"
+                if not any(d["draft_id"] == draft_id for d in OUTREACH_DRAFTS):
+                    OUTREACH_DRAFTS.append({
+                        "draft_id": draft_id,
+                        "patient_id": sid,
+                        "trial_id": trial["id"],
+                        "trial_title": trial["title"],
+                        "medicine": trial["medicine"],
+                        "language": "EN",
+                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                        "status": "Pending approval",
+                        "confidence": conf,
+                        "subject": f"Clinical Research Participation Opportunity: {trial['title']}",
+                        "body": (
+                            f"Dear Patient,\n\nBased on clinical criteria review under IRB Protocol, you may be eligible to participate "
+                            f"in a study evaluating {trial['medicine']}.\n\nParticipation is voluntary. All study visits and medications are provided "
+                            f"at no cost.\n\nSincerely,\nClinical Research Operations Team"
+                        ),
+                    })
+            added += 1
+    print(f"[SEED] Loaded {added} MIMIC-III patient screenings into cohort (total: {len(DEFAULT_COHORT)})")
+
+
+# Run seed in background thread so server starts fast, but allow endpoints to wait if needed
+_SEED_THREAD = threading.Thread(target=_seed_mimic_patients, daemon=True)
+_SEED_THREAD.start()
+
+def ensure_seeded(timeout: float = 10.0):
+    if _SEED_THREAD.is_alive():
+        _SEED_THREAD.join(timeout=timeout)
+
 
 # ── Patients Endpoints ────────────────────────────────────────────────────────
 @api_router.get("/patients")
 def list_patients(trial_id: str = "", decision: str = ""):
+    ensure_seeded()
     patients = DEFAULT_COHORT
     if trial_id:
         patients = [p for p in patients if p["trial_id"] == trial_id]
@@ -566,10 +692,11 @@ class AdjudicationPayload(BaseModel):
 
 @api_router.get("/review/queue")
 def get_review_queue():
+    ensure_seeded()
     borderline = [p for p in DEFAULT_COHORT if p["status"] == "REVIEW_REQUIRED"]
     return [
         {
-            "session_id": f"REV-{p['subject_id']}",
+            "session_id": f"REV-{p['subject_id']}-{p['trial_id']}",
             "patient_id": p["subject_id"],
             "trial_id": p["trial_id"],
             "trial_title": p["trial_title"],
@@ -588,9 +715,18 @@ def get_review_queue():
 
 @api_router.post("/review/{session_id}/adjudicate")
 def adjudicate_review(session_id: str, payload: AdjudicationPayload):
-    sub_id = session_id.replace("REV-", "")
-    target_pt = next((p for p in DEFAULT_COHORT if p["subject_id"] == sub_id), None)
+    target_pt = next(
+        (
+            p
+            for p in DEFAULT_COHORT
+            if f"REV-{p['subject_id']}-{p['trial_id']}" == session_id
+            or f"REV-{p['subject_id']}" == session_id
+            or p["subject_id"] == session_id.replace("REV-", "")
+        ),
+        None,
+    )
     
+    sub_id = target_pt["subject_id"] if target_pt else session_id.replace("REV-", "")
     if target_pt:
         target_pt["status"] = "ELIGIBLE" if payload.decision.upper() == "INCLUDE" else "INELIGIBLE"
         target_pt["reviewed_at"] = datetime.now(timezone.utc).isoformat()
@@ -602,7 +738,7 @@ def adjudicate_review(session_id: str, payload: AdjudicationPayload):
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         if payload.decision.upper() == "INCLUDE":
-            draft_id = f"DRF-{sub_id.replace('PT-', '')}"
+            draft_id = f"DRF-{sub_id.replace('PT-', '')}-{target_pt['trial_id']}"
             if not any(d["draft_id"] == draft_id for d in OUTREACH_DRAFTS):
                 OUTREACH_DRAFTS.insert(0, {
                     "draft_id": draft_id,
@@ -641,6 +777,30 @@ def adjudicate_review(session_id: str, payload: AdjudicationPayload):
     }
 
 
+@api_router.get("/review/resolved")
+def get_resolved_reviews():
+    """Return patients that have been adjudicated (resolved from review queue)."""
+    return [
+        {
+            "session_id": f"REV-{p['subject_id']}",
+            "patient_id": p["subject_id"],
+            "trial_id": p["trial_id"],
+            "trial_title": p["trial_title"],
+            "medicine": p["medicine"],
+            "age": p["age"],
+            "gender": p["gender"],
+            "disputed_criterion": p.get("disagreement", {}).get("criterion", "Eligibility criteria threshold") if p.get("disagreement") else "Resolved",
+            "confidence": p["confidence"],
+            "time_in_queue": "resolved",
+            "decision": p["adjudication"]["decision"],
+            "justification": p["adjudication"]["justification"],
+            "adjudicated_at": p["adjudication"]["timestamp"],
+        }
+        for p in DEFAULT_COHORT
+        if p.get("adjudication")
+    ]
+
+
 # ── Outreach Drafts Endpoints ─────────────────────────────────────────────────
 OUTREACH_DRAFTS = [
     {
@@ -673,6 +833,17 @@ OUTREACH_DRAFTS = [
 
 @api_router.get("/outreach/drafts")
 def list_outreach_drafts():
+    # Auto-transition approved drafts older than 30 seconds to Sent
+    now = datetime.now(timezone.utc)
+    for d in OUTREACH_DRAFTS:
+        if d["status"] == "Approved" and d.get("approved_at"):
+            try:
+                approved_time = datetime.fromisoformat(d["approved_at"].replace("Z", "+00:00"))
+                if (now - approved_time).total_seconds() > 15:
+                    d["status"] = "Sent"
+                    d["sent_at"] = now.isoformat()
+            except (ValueError, TypeError):
+                pass
     return OUTREACH_DRAFTS
 
 
