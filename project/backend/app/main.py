@@ -60,8 +60,11 @@ async def require_session(request: Request, call_next):
 
 @app.get("/")
 def root():
+    from .api.router import DEFAULT_COHORT
     return {
         "name": settings.PROJECT_NAME,
+        "status": "healthy",
+        "cohort_screenings": len(DEFAULT_COHORT),
         "docs": f"{settings.API_V1_STR}/docs",
         "health": f"{settings.API_V1_STR}/health",
     }

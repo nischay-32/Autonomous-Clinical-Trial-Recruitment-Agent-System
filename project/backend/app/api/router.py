@@ -521,12 +521,25 @@ def get_audit(patient_id: str = "", limit: int = 50):
 
 
 # ── Seed Clinical Cohort (MIMIC-III Synthesized) ─────────────────────────────
-DEFAULT_COHORT: list[dict] = []
+_COHORT_SEED_FILE = Path(__file__).resolve().parent.parent / "db" / "screened_cohort_300.json"
+
+def _load_initial_cohort() -> list[dict]:
+    if _COHORT_SEED_FILE.exists():
+        try:
+            with open(_COHORT_SEED_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data:
+                    return data
+        except Exception as e:
+            print(f"[COHORT] Error reading seed cohort: {e}")
+    return []
+
+DEFAULT_COHORT: list[dict] = _load_initial_cohort()
 
 
 # ── Seed all MIMIC-III patients on startup ────────────────────────────────────
 _SEED_LOCK = threading.Lock()
-_SEED_DONE = False
+_SEED_DONE = (len(DEFAULT_COHORT) >= 300)
 
 def _seed_mimic_patients():
     """Load all MIMIC-III demo patients, screen each against every trial,
@@ -534,6 +547,9 @@ def _seed_mimic_patients():
     global _SEED_DONE
     with _SEED_LOCK:
         if _SEED_DONE:
+            return
+        if len(DEFAULT_COHORT) >= 300:
+            _SEED_DONE = True
             return
         _SEED_DONE = True
 
@@ -805,34 +821,20 @@ def get_resolved_reviews():
 
 
 # ── Outreach Drafts Endpoints ─────────────────────────────────────────────────
-OUTREACH_DRAFTS = [
-    {
-        "draft_id": "DRF-10492",
-        "patient_id": "PT-10492",
-        "trial_id": "NCT00005143",
-        "trial_title": "Metformin Clinical Trial for Diabetes Management",
-        "medicine": "Metformin",
-        "language": "EN",
-        "generated_at": "2026-10-11T19:35:00Z",
-        "status": "Pending approval",
-        "confidence": 0.94,
-        "subject": "Clinical Research Participation Opportunity: Type 2 Diabetes Management Study",
-        "body": "Dear Patient,\n\nOur clinical research division at Memorial Cancer Institute is currently evaluating novel glycemic management strategies for adults with Type 2 Diabetes.\n\nBased on preliminary clinical criteria review under IRB Protocol #IRB-2026-089, you may be eligible to participate in a clinical study investigating optimized Metformin therapy.\n\nParticipation is entirely voluntary and does not impact your standard medical care. Study visits, lab evaluations, and study medication are provided at no cost.\n\nTo learn more or speak with a study coordinator, please contact our team at (555) 019-2834.\n\nSincerely,\nClinical Research Operations Team"
-    },
-    {
-        "draft_id": "DRF-31044",
-        "patient_id": "PT-31044",
-        "trial_id": "NCT00262600",
-        "trial_title": "Warfarin Anticoagulation Efficacy Protocol",
-        "medicine": "Warfarin",
-        "language": "EN",
-        "generated_at": "2026-10-11T21:05:00Z",
-        "status": "Pending approval",
-        "confidence": 0.96,
-        "subject": "Invitation to Participate in Atrial Fibrillation Anticoagulation Research",
-        "body": "Dear Patient,\n\nYou are invited to participate in a clinical study assessing individualized anticoagulation therapies for individuals diagnosed with non-valvular atrial fibrillation.\n\nYour potential eligibility was verified through our automated clinical matching pipeline (IRB Protocol #IRB-2026-012). If you choose to join, your clinical progress will be closely monitored by our cardiology team.\n\nPlease contact our coordinator office to discuss protocol details."
-    }
-]
+_OUTREACH_SEED_FILE = Path(__file__).resolve().parent.parent / "db" / "outreach_drafts_seed.json"
+
+def _load_initial_outreach() -> list[dict]:
+    if _OUTREACH_SEED_FILE.exists():
+        try:
+            with open(_OUTREACH_SEED_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data:
+                    return data
+        except Exception:
+            pass
+    return []
+
+OUTREACH_DRAFTS: list[dict] = _load_initial_outreach()
 
 @api_router.get("/outreach/drafts")
 def list_outreach_drafts():
