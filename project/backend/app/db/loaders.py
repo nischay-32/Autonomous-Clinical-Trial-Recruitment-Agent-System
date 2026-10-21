@@ -20,6 +20,18 @@ def load_mimic_cohort(
     limit: int = 100,
 ) -> list[dict]:
     """Assembles unified, normalized patient profiles by joining MIMIC-III demo tables."""
+    # 1. Prefer pre-compiled MIMIC-III demo JSON if present (works on Render and cloud deployments)
+    json_path = Path(__file__).resolve().parent / "mimic_demo_patients.json"
+    if json_path.exists():
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+                if cached:
+                    return cached[:limit]
+        except Exception:
+            pass
+
+    # 2. Fall back to parsing local raw CSV tables
     base_path = Path(__file__).resolve().parents[4]
     if not data_dir:
         data_dir = str(base_path / "Datasets" / "MIMIC3" / "mimic-iii-clinical-database-demo-1.4")
