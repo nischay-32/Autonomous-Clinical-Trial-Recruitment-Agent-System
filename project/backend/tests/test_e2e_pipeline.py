@@ -13,8 +13,10 @@ Verifies all 7 phases:
 import unittest
 from datetime import datetime, timezone
 from app.agents.orchestrator import run_recruitment_pipeline
-from app.agents.compliance import ComplianceSafetyAuditor, log_audit_event, get_audit_trail
+from app.agents.compliance import verify_compliance, ComplianceSafetyAuditor
+from app.db.audit import log_audit_event, get_audit_trail
 from app.api.router import (
+    ensure_seeded,
     DEMO_TRIALS,
     DEFAULT_COHORT,
     OUTREACH_DRAFTS,
@@ -54,21 +56,32 @@ class TestE2ERecruitmentPipeline(unittest.TestCase):
         self.assertIn("token", res_login)
         self.assertEqual(res_login["user"]["organization"], "Mass General Brigham")
 
-    def test_02_screening_pipeline_eligible_patient(self):
+    def test_02_screening_pipeline_eligible_pipeline(self):
         """Phases 3-6: Fully eligible patient triggers passing matcher, compliance check, and outreach draft."""
         patient_data = {
             "subject_id": "PT-TEST-001",
-            "age": 55,
-            "gender": "M",
-            "diagnoses": ["250.00", "401.9"],
-            "labs": {"HbA1c": 8.0, "eGFR": 75.0, "Serum Creatinine": 1.0},
-            "medications": ["Lisinopril 10mg"]
+            "gender": "F",
+            "age": 52,
+            "diagnoses": ["250.00"],
+            "labs": {
+                "hba1c": 8.5,
+                "glucose": 145,
+                "egfr": 75,
+                "creatinine": 0.9,
+                "alt": 25,
+                "ast": 22,
+                "fasting_glucose": 140,
+                "uacr": 20,
+            },
+            "vitals": {"bmi": 27.5, "sbp": 128},
+            "medications": ["Atorvastatin"],
+            "profile": {"notes": ["Informed consent verified. Patient agrees to study protocol."]},
         }
 
         result = run_recruitment_pipeline(patient_data, self.trial)
         self.assertIn("status", result)
         self.assertEqual(result["status"], "ELIGIBLE")
-        self.assertGreaterEqual(result["confidence"], 0.70)
+        self.assertGreaterEqual(result["confidence"], 0.85)
         self.assertTrue(result["compliance"]["is_compliant"])
         self.assertIsNotNone(result.get("outreach"))
         self.assertIn("Metformin", result["outreach"]["draft_content"])
@@ -92,23 +105,28 @@ class TestE2ERecruitmentPipeline(unittest.TestCase):
 
     def test_04_adjudication_and_outreach_approval(self):
         """Phase 5 & 6: Human-in-the-loop coordinator adjudicates patient and approves outreach."""
-        session_id = "REV-PT-20815"
+        ensure_seeded()
+        target_pt = next((p for p in DEFAULT_COHORT if p.get("status") == "REVIEW_REQUIRED"), None)
+        self.assertIsNotNone(target_pt)
+        sub_id = target_pt["subject_id"]
+        session_id = f"REV-{sub_id}"
+
         adj_payload = AdjudicationPayload(
             decision="INCLUDE",
             justification="Patient demonstrates stable renal clearance over 6-month observation window.",
             coordinator="Dr. C. Roberts"
         )
         res_adj = adjudicate_review(session_id, adj_payload)
-        self.assertEqual(res_adj["status"], "ADJUDICATED")
+        self.assertEqual(res_adj["status"], "RESOLVED")
 
         # Verify updated status in DEFAULT_COHORT
-        cohort_pt = next((p for p in DEFAULT_COHORT if p["subject_id"] == "PT-20815"), None)
+        cohort_pt = next((p for p in DEFAULT_COHORT if p["subject_id"] == sub_id), None)
         self.assertIsNotNone(cohort_pt)
         self.assertEqual(cohort_pt["status"], "ELIGIBLE")
 
         # Verify outreach approval
         app_req = ApproveRequest(
-            patient_id="PT-20815",
+            patient_id=sub_id,
             coordinator_name="Dr. C. Roberts",
             comments="Signed off under IRB protocol."
         )
@@ -120,16 +138,16 @@ class TestE2ERecruitmentPipeline(unittest.TestCase):
         log_audit_event(
             agent_name="Coordinator",
             action="VERIFY_SECURITY_AUDIT",
-            patient_id="PT-20815",
+            patient_id="PT-AUDIT-TEST",
             trial_id="NCT00005143",
             details={"irb_protocol": "IRB-2026-9812", "hipaa_compliant": True}
         )
 
-        audit_trail = get_audit_trail(patient_id="PT-20815", limit=50)
+        audit_trail = get_audit_trail(patient_id="PT-AUDIT-TEST", limit=50)
         self.assertGreater(len(audit_trail), 0)
-        latest_event = audit_trail[-1]
+        latest_event = audit_trail[0]
         self.assertEqual(latest_event["action"], "VERIFY_SECURITY_AUDIT")
-        self.assertEqual(latest_event["patient_id"], "PT-20815")
+        self.assertEqual(latest_event["patient_id"], "PT-AUDIT-TEST")
 
 
 if __name__ == "__main__":

@@ -658,9 +658,12 @@ def _seed_mimic_patients():
 _SEED_THREAD = threading.Thread(target=_seed_mimic_patients, daemon=True)
 _SEED_THREAD.start()
 
-def ensure_seeded(timeout: float = 10.0):
+def ensure_seeded(timeout: float = 15.0):
+    """Ensure background MIMIC cohort seeding has finished."""
     if _SEED_THREAD.is_alive():
         _SEED_THREAD.join(timeout=timeout)
+    if not _SEED_DONE:
+        _seed_mimic_patients()
 
 
 # ── Patients Endpoints ────────────────────────────────────────────────────────

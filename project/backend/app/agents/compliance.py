@@ -1,6 +1,7 @@
 """Compliance & Safety Agent: verifies contraindications, drug interactions, and HIPAA boundaries."""
 
 import re
+from ..db.audit import log_audit_event, get_audit_trail
 
 KNOWN_CONTRAINDICATIONS = {
     "metformin": {
@@ -85,3 +86,7 @@ def verify_compliance(patient: dict, medicine: str) -> dict:
         "hipaa_compliant": hipaa_ok,
         "protocol_clearance": is_safe and hipaa_ok,
     }
+
+
+# Backwards compatibility alias
+ComplianceSafetyAuditor = verify_compliance

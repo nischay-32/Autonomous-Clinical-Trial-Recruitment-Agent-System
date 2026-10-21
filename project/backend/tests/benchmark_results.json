@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-10-21T18:54:58Z",
+  "total_screenings": 300,
+  "total_duration_sec": 4.034,
+  "overall_throughput_pts_per_sec": 74.4,
+  "trials": {
+    "NCT00005143": {
+      "title": "Type 2 Diabetes Mellitus Glycemic Management (Metformin)",
+      "medicine": "Metformin",
+      "patients": 100,
+      "duration_sec": 1.557,
+      "throughput_pts_per_sec": 64.2,
+      "latency_ms": {
+        "avg": 15.57,
+        "p50": 9.38,
+        "p95": 39.55
+      },
+      "cohort_breakdown": {
+        "ELIGIBLE": 1,
+        "REVIEW_REQUIRED": 48,
+        "INELIGIBLE": 51
+      },
+      "average_confidences": {
+        "ELIGIBLE": 0.95,
+        "REVIEW_REQUIRED": 0.741,
+        "INELIGIBLE": 0.949
+      },
+      "avg_deliberation_rounds": 1.97
+    },
+    "NCT00262600": {
+      "title": "Atrial Fibrillation Stroke Prevention (ACTIVE-W Warfarin)",
+      "medicine": "Warfarin",
+      "patients": 100,
+      "duration_sec": 1.268,
+      "throughput_pts_per_sec": 78.8,
+      "latency_ms": {
+        "avg": 12.68,
+        "p50": 10.35,
+        "p95": 32.61
+      },
+      "cohort_breakdown": {
+        "ELIGIBLE": 0,
+        "REVIEW_REQUIRED": 0,
+        "INELIGIBLE": 100
+      },
+      "average_confidences": {
+        "ELIGIBLE": 0.0,
+        "REVIEW_REQUIRED": 0.0,
+        "INELIGIBLE": 0.961
+      },
+      "avg_deliberation_rounds": 1.0
+    },
+    "NCT00000560": {
+      "title": "Heart Failure with Reduced Ejection Fraction (Lisinopril)",
+      "medicine": "Lisinopril",
+      "patients": 100,
+      "duration_sec": 1.208,
+      "throughput_pts_per_sec": 82.8,
+      "latency_ms": {
+        "avg": 12.08,
+        "p50": 10.21,
+        "p95": 26.69
+      },
+      "cohort_breakdown": {
+        "ELIGIBLE": 0,
+        "REVIEW_REQUIRED": 79,
+        "INELIGIBLE": 21
+      },
+      "average_confidences": {
+        "ELIGIBLE": 0.0,
+        "REVIEW_REQUIRED": 0.733,
+        "INELIGIBLE": 0.958
+      },
+      "avg_deliberation_rounds": 2.58
+    }
+  }
+}

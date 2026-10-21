@@ -32,6 +32,7 @@ extracted_phase1_report.txt
 id_rsa*
 secrets/
 vault-token
+project/backend/app/db/users_store.json
 
 # ==========================================
 # Runtime & Language Dependencies
